@@ -12,14 +12,16 @@ const TURN = ['r', 'd', 'l', 'u'];
 const REP_BODY_MAX = 3;
 const STICKERS = ['🦄', '🐸', '🦖', '🐙', '🦁', '🐼', '🐢', '🦀', '🐬', '🌴', '🍉', '🐳',
   '🐧', '⛄', '🦊', '🦉', '🦌', '🎿', '🚀', '👽', '🪐', '🛸', '🌟', '👑',
-  '🦘', '🐊', '🦋', '🌺', '🐠', '🏅'];
+  '🦘', '🐊', '🦋', '🌺', '🐠', '🏅',
+  '🦆', '🪷', '🐞', '🌈', '🦦', '🏆'];
 const FRUITS = { A: ['🍎', '🍌', '🍇'], B: ['🍓', '🍊', '🍉'] };
 const THEMES = [
   { trees: ['🌳', '🌲', '🌳', '🌳', '🌲'], deco: ['🌷', '🌼', '🌸', '🍄', '🌻'] },
   { trees: ['🌴', '🌴', '🌵', '🌴', '🪨'], deco: ['🐚', '🦀', '🐚', '⛱️', '🐚'] },
   { trees: ['🌲', '🎄', '🌲', '⛄', '🌲'], deco: ['❄️', '🐧', '❄️', '⛄', '❄️'] },
   { trees: ['🪐', '☄️', '🌑', '🪐', '🛰️'], deco: ['✨', '🛸', '✨', '👽', '✨'] },
-  { trees: ['🌴', '🌿', '🌳', '🌴', '🌿'], deco: ['🌺', '🦋', '🍀', '🐸', '🌺'] }
+  { trees: ['🌴', '🌿', '🌳', '🌴', '🌿'], deco: ['🌺', '🦋', '🍀', '🐸', '🌺'] },
+  { trees: ['🌳', '🌾', '🌳', '🪨', '🌾'], deco: ['🪷', '🦆', '🐞', '🪷', '🌼'] }
 ];
 // Manito guía: qué señalar en cada nivel que presenta algo nuevo
 const TUTO = { 0: ['r', 'ready'], 4: ['pick', 'ready'], 5: ['blk', 'ready'], 18: ['rep', 'r', 'repn', 'ready'], 24: ['j', 'ready'] };
@@ -214,13 +216,13 @@ function join(p) {
   if (S.joined.A && S.joined.B) {
     Snd.play('clap'); confetti(60);
     Voice.say('¡Hola Tito y Lula! ¡A programar juntos!');
-    setTimeout(() => { S.joined = { A: false, B: false }; $$('.join').forEach(b => b.classList.remove('on')); openMap(); }, 900);
+    setTimeout(() => { S.joined = { A: false, B: false }; $$('.join').forEach(b => b.classList.remove('on')); openDuo(); }, 900);
   } else if (S.joined[p]) Voice.say(p === 'A' ? '¡Hola Tito! ¿Y Lula?' : '¡Hola Lula! ¿Y Tito?');
 }
 
 /* ---------- Mapa ---------- */
 function openMap() {
-  overlay(null); show('scr-map'); Voice.stop(); setWorld(Math.min(4, worldOf(S.save.unlocked))); S.duo = null;
+  overlay(null); show('scr-map'); Voice.stop(); setWorld(Math.min(WORLDS.length - 1, worldOf(S.save.unlocked))); S.duo = null;
   const box = $('#levels'); box.innerHTML = '';
   WORLDS.forEach((W, w) => {
     const row = document.createElement('div');
@@ -779,7 +781,7 @@ function highFive(p) {
   setTimeout(() => {
     if (S.custom && S.duo) {
       if (S.duo.i + 1 < S.duo.levels.length) { S.duo.i++; return startLevel(0, S.duo.levels[S.duo.i]); }
-      return openDuo();
+      return openMap();
     }
     if (S.custom) return openEditor();
     const next = S.idx + 1;

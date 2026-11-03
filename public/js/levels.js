@@ -9,7 +9,8 @@
   { name: 'La playa', emoji: '🏖️', theme: 'Giros' },
   { name: 'La nieve', emoji: '⛄', theme: 'Trabajo en equipo' },
   { name: 'El espacio', emoji: '🚀', theme: 'Repetir' },
-  { name: 'El arroyo', emoji: '🐸', theme: 'Saltar' }
+  { name: 'El arroyo', emoji: '🐸', theme: 'Saltar' },
+  { name: 'La laguna', emoji: '🦆', theme: 'Saltar y repetir' }
 ];
 (typeof window !== 'undefined' ? window : globalThis).LEVELS = [
   /* ---------------- Mundo 1: Pradera ---------------- */
@@ -254,6 +255,43 @@
           'f.....f']
   },
   {
+    name: 'Dos charcos', tools: ['r', 'l', 'j'], max: 3,
+    text: '🦘 🦘', say: '¡Dos charcos! Saltá dos veces.',
+    map: ['f.....f',
+          'A~.~a..',
+          '.......',
+          '..b~.~B',
+          'f.....f']
+  },
+  {
+    name: 'Árboles y charcos', tools: ['r', 'l', 'j'], max: 3,
+    text: '🌳 🦘 💦', say: 'El canguro salta árboles y charcos.',
+    map: ['f.....f',
+          'A#.~a..',
+          '.......',
+          '..b~.#B',
+          'f.....f']
+  },
+  {
+    name: 'Estrella en el charco', tools: ['r', 'l', 'j'], max: 3, need: true,
+    text: '🦘 ⭐ 🦘', say: 'Saltá y juntá la estrella.',
+    map: ['f.....f',
+          'A~*~a..',
+          '.......',
+          '..b~*~B',
+          'f.....f']
+  },
+  {
+    name: 'Bajar, caminar y saltar', tools: ['u', 'd', 'l', 'r', 'j'], max: 4,
+    text: '⬇️ ➡️ 🦘', say: 'El canguro salta para donde caminó último.',
+    map: ['A.....f',
+          '..~a...',
+          '.......',
+          '...b~..',
+          'f.....B']
+  },
+  /* ---------------- Mundo 6: Laguna (saltar y repetir) ---------------- */
+  {
     name: 'Saltos con estrellas', tools: ['u', 'd', 'l', 'r', 'j'], max: 5, need: true,
     text: '⭐ 🦘 ⭐', say: '¡Junten todas las estrellas y salten el charco!',
     map: ['f.....f',
@@ -263,11 +301,29 @@
           'f.....f']
   },
   {
+    name: 'Estrellas saltarinas', tools: ['r', 'l', 'j'], max: 5, need: true,
+    text: '⭐ 🦘 ⭐', say: '¡Muchas estrellas! Caminá y saltá para juntarlas todas.',
+    map: ['f.....f',
+          'A*~*~*a',
+          '.......',
+          'b*~*~*B',
+          'f.....f']
+  },
+  {
     name: 'La puerta del arroyo', tools: ['u', 'd', 'l', 'r', 'j'], max: 5, first: 'A',
     text: '🦘 🔴 🚪', say: 'Tito salta el charco y pisa el botón rojo para abrirle a Lula.',
     map: ['A.~oa.B',
           '######D',
           'f....fb']
+  },
+  {
+    name: 'Repetir el salto', tools: ['r', 'l', 'j', 'rep'], max: 2,
+    text: '🔁 🦘', say: 'Usá el bloque repetir para saltar dos veces.',
+    map: ['f.....f',
+          'A~.~a..',
+          '.......',
+          '..b~.~B',
+          'f.....f']
   },
   {
     name: 'Saltar y repetir', tools: ['r', 'l', 'j', 'rep'], max: 4,
