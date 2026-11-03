@@ -2,15 +2,15 @@
 // A/B = inicio de Tito/Lula | a/b = casita de Tito/Lula | * estrella
 // o = botón mágico | D = puerta (se abre cuando alguien pisa el botón)
 // mode 'predict': el programa viene armado (pre) y hay que adivinar en qué fruta termina (opts)
-// j = saltar (2 casillas hacia donde mira, por encima de lo que haya en el medio) | need: hay que juntar todas las estrellas
+// j = recoger (junta la estrella de la casilla donde está parado) | need: hay que juntar todas las estrellas
 // pre: programa ya cargado ("rrd", "3(rd)l" = repetir 3 veces → ↓)
 (typeof window !== 'undefined' ? window : globalThis).WORLDS = [
   { name: 'La pradera', emoji: '🌳', theme: 'Secuencias' },
   { name: 'La playa', emoji: '🏖️', theme: 'Giros' },
   { name: 'La nieve', emoji: '⛄', theme: 'Trabajo en equipo' },
   { name: 'El espacio', emoji: '🚀', theme: 'Repetir' },
-  { name: 'El arroyo', emoji: '🐸', theme: 'Saltar' },
-  { name: 'La laguna', emoji: '🦆', theme: 'Saltar y repetir' }
+  { name: 'El arroyo', emoji: '🐸', theme: 'Recoger' },
+  { name: 'La laguna', emoji: '🦆', theme: 'Recoger y repetir' }
 ];
 (typeof window !== 'undefined' ? window : globalThis).LEVELS = [
   /* ---------------- Mundo 1: Pradera ---------------- */
@@ -235,112 +235,110 @@
           'f##.a#.',
           'f##b.*.']
   },
-  /* ---------------- Mundo 5: Arroyo (saltar) ---------------- */
+  /* ---------------- Mundo 5: Arroyo (recoger) ---------------- */
   {
-    name: '¡A saltar!', tools: ['j'], max: 2,
-    text: '🦘 💦', say: '¡Bloque nuevo: saltar! Tocá el canguro y saltá el charco.',
+    name: '¡A juntar!', tools: ['r', 'l', 'j'], max: 4, need: true,
+    text: '⭐ 🧺', say: '¡Bloque nuevo: la canasta! Parate en la estrella y tocá la canasta para juntarla.',
     map: ['f.....f',
-          '.A~a...',
+          'A*a....',
           '.......',
-          '...b~B.',
+          '....b*B',
           'f.....f']
   },
   {
-    name: 'Caminar y saltar', tools: ['r', 'l', 'j'], max: 4,
-    text: '➡️ 🦘 ➡️', say: 'Un paso, un salto y otro paso.',
+    name: 'Dos estrellas', tools: ['r', 'l', 'j'], max: 7, need: true,
+    text: '⭐ 🧺 ⭐ 🧺', say: 'Dos estrellas: hay que juntar las dos.',
     map: ['f.....f',
-          'A.~.a..',
+          'A*.*a..',
           '.......',
-          '..b.~.B',
+          '..b*.*B',
           'f.....f']
   },
   {
-    name: 'Dos charcos', tools: ['r', 'l', 'j'], max: 3,
-    text: '🦘 🦘', say: '¡Dos charcos! Saltá dos veces.',
-    map: ['f.....f',
-          'A~.~a..',
+    name: 'Estrella escondida', tools: ['u', 'd', 'l', 'r', 'j'], max: 6, need: true,
+    text: '⬆️ 🧺 ⬇️', say: 'La estrella está arriba. Subí, juntala y volvé.',
+    map: ['.*....f',
+          'A.a....',
           '.......',
-          '..b~.~B',
+          '....b.B',
+          'f....*.']
+  },
+  {
+    name: 'Muchas estrellas', tools: ['r', 'l', 'j'], max: 8, need: true,
+    text: '⭐⭐⭐ 🧺', say: '¡Tres estrellas seguidas! Un paso y juntar, un paso y juntar.',
+    map: ['f.....f',
+          'A***a..',
+          '.......',
+          '..b***B',
           'f.....f']
   },
   {
-    name: 'Árboles y charcos', tools: ['r', 'l', 'j'], max: 3,
-    text: '🌳 🦘 💦', say: 'El canguro salta árboles y charcos.',
-    map: ['f.....f',
-          'A#.~a..',
+    name: 'La vuelta del charco', tools: ['u', 'd', 'l', 'r', 'j'], max: 8, need: true,
+    text: '💦 ⭐ 🧺', say: 'Juntá la estrella y después dale la vuelta al charco.',
+    map: ['f......',
+          'A*~.a..',
           '.......',
-          '..b~.#B',
-          'f.....f']
+          '..b.~*B',
+          '.......']
   },
   {
-    name: 'Estrella en el charco', tools: ['r', 'l', 'j'], max: 3, need: true,
-    text: '🦘 ⭐ 🦘', say: 'Saltá y juntá la estrella.',
-    map: ['f.....f',
-          'A~*~a..',
-          '.......',
-          '..b~*~B',
-          'f.....f']
-  },
-  {
-    name: 'Bajar, caminar y saltar', tools: ['u', 'd', 'l', 'r', 'j'], max: 4,
-    text: '⬇️ ➡️ 🦘', say: 'El canguro salta para donde caminó último.',
-    map: ['A.....f',
-          '..~a...',
-          '.......',
-          '...b~..',
-          'f.....B']
-  },
-  /* ---------------- Mundo 6: Laguna (saltar y repetir) ---------------- */
-  {
-    name: 'Saltos con estrellas', tools: ['u', 'd', 'l', 'r', 'j'], max: 5, need: true,
-    text: '⭐ 🦘 ⭐', say: '¡Junten todas las estrellas y salten el charco!',
-    map: ['f.....f',
-          'A*.~.*a',
-          '.......',
-          'b*.~.*B',
-          'f.....f']
-  },
-  {
-    name: 'Estrellas saltarinas', tools: ['r', 'l', 'j'], max: 5, need: true,
-    text: '⭐ 🦘 ⭐', say: '¡Muchas estrellas! Caminá y saltá para juntarlas todas.',
-    map: ['f.....f',
-          'A*~*~*a',
-          '.......',
-          'b*~*~*B',
-          'f.....f']
-  },
-  {
-    name: 'La puerta del arroyo', tools: ['u', 'd', 'l', 'r', 'j'], max: 5, first: 'A',
-    text: '🦘 🔴 🚪', say: 'Tito salta el charco y pisa el botón rojo para abrirle a Lula.',
-    map: ['A.~oa.B',
+    name: 'Estrellas en equipo', tools: ['u', 'd', 'l', 'r', 'j'], max: 6, need: true, first: 'A',
+    text: '⭐ 🔴 🚪', say: 'Tito junta su estrella y pisa el botón rojo. Lula junta la suya.',
+    map: ['A*.oa.B',
           '######D',
-          'f....fb']
+          'f....*b']
   },
+  /* ---------------- Mundo 6: Laguna (recoger y repetir) ---------------- */
   {
-    name: 'Repetir el salto', tools: ['r', 'l', 'j', 'rep'], max: 2,
-    text: '🔁 🦘', say: 'Usá el bloque repetir para saltar dos veces.',
+    name: 'Repetir juntar', tools: ['r', 'l', 'j', 'rep'], max: 4, need: true,
+    text: '🔁 ⭐ 🧺', say: '¡Ahora con repetir! Adentro: un paso y juntar.',
     map: ['f.....f',
-          'A~.~a..',
+          'A***a..',
           '.......',
-          '..b~.~B',
+          '..b***B',
           'f.....f']
   },
   {
-    name: 'Saltar y repetir', tools: ['r', 'l', 'j', 'rep'], max: 4,
-    text: '🔁 🦘', say: '¡Muchos charcos! Repetí el salto.',
+    name: 'Estrellas salteadas', tools: ['r', 'l', 'j', 'rep'], max: 5, need: true,
+    text: '🔁 ➡️➡️🧺', say: 'Dos pasos y juntar. ¿Cuántas veces?',
     map: ['f.....f',
-          'A~.~.~a',
+          'A.*.*a.',
           '.......',
-          'B.~.~.b',
+          '.b*.*.B',
           'f.....f']
   },
   {
-    name: '¡Gran salto!', tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 5, first: 'A', need: true,
-    text: '🏆 🦘 🔁', say: '¡El gran final! Saltos, repetir, puerta y estrella.',
-    map: ['A~.~.~o',
-          '#####.a',
-          'B*.....',
-          '###D###',
-          '...b...']
+    name: 'Columna de estrellas', tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 5, need: true,
+    text: '🔁 ⬇️ 🧺', say: 'Bajá juntando todas las estrellas.',
+    map: ['A.....B',
+          '*.....*',
+          '*.....*',
+          '*.....*',
+          'a.....b']
+  },
+  {
+    name: 'La puerta de las estrellas', tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 6, need: true, first: 'A',
+    text: '🔁 🧺 🔴 🚪', say: 'Tito junta todo y abre la puerta. Lula baja a su casa.',
+    map: ['A***oaB',
+          '######D',
+          '......b']
+  },
+  {
+    name: 'Escalera de estrellas', tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 6, need: true,
+    text: '🔁 ↘️ 🧺', say: '¡Escalera! Adentro del repetir: derecha, abajo y juntar.',
+    map: ['A.....B',
+          '.*...*.',
+          '..*.*..',
+          '...ab..',
+          'f.....f']
+  },
+  {
+    name: '¡Gran cosecha!', tools: ['r', 'l', 'j', 'rep'], max: 4, need: true,
+    text: '🏆 🔁 🧺', say: '¡El gran final! Juntá todas las estrellas.',
+    map: ['f.....f',
+          'A****a.',
+          '.......',
+          '.b****B',
+          'f.....f']
   }
 ];

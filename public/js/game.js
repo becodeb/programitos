@@ -74,7 +74,7 @@ function gateSVG() {
   <rect x="4" y="30" width="92" height="12" rx="4"/><rect x="4" y="64" width="92" height="12" rx="4"/></g>
   <circle cx="50" cy="52" r="14" fill="#ffd23f" stroke="#c99a00" stroke-width="3"/><rect x="45" y="50" width="10" height="9" rx="2" fill="#7a4518"/><path d="M46 50 v-4 a4 4 0 0 1 8 0 v4" stroke="#7a4518" stroke-width="2.5" fill="none"/></svg>`;
 }
-function blkInner(d) { return d === 'j' ? '<span class="jico">🦘</span>' : arrowSVG(d); }
+function blkInner(d) { return d === 'j' ? '<span class="jico">🧺</span>' : arrowSVG(d); }
 function arrowSVG(dir) {
   return `<svg viewBox="0 0 40 40" style="transform:rotate(${ROT[dir]}deg)"><path d="M5 15h17V7l14 13-14 13v-8H5z" fill="#fff" stroke="rgba(0,0,0,.25)" stroke-width="2" stroke-linejoin="round"/></svg>`;
 }
@@ -255,7 +255,7 @@ function buildPanel(p) {
     <div class="prog" id="prog-${p}"></div>
     <div class="palette">
       <button class="pal up d-u" data-act="u">${arrowSVG('u')}<span class="key">${k.u}</span></button>
-      <button class="pal jp" data-act="j" style="grid-column:3;grid-row:1"><span class="jico">🦘</span><span class="key">${k.j}</span></button>
+      <button class="pal jp" data-act="j" style="grid-column:3;grid-row:1"><span class="jico">🧺</span><span class="key">${k.j}</span></button>
       <button class="pal left d-l" data-act="l">${arrowSVG('l')}<span class="key">${k.l}</span></button>
       <button class="pal down d-d" data-act="d">${arrowSVG('d')}<span class="key">${k.d}</span></button>
       <button class="pal right d-r" data-act="r">${arrowSVG('r')}<span class="key">${k.r}</span></button>
@@ -337,7 +337,7 @@ function closeRep(p, i) {
 // Vista previa: lo de adentro, repetido n veces, en chiquito
 function repPreview(it) {
   if (!it.body.length) return '';
-  const one = it.body.map(d => `<span class="mini">${d === 'j' ? '🦘' : arrowSVG(d)}</span>`).join('');
+  const one = it.body.map(d => `<span class="mini">${d === 'j' ? '🧺' : arrowSVG(d)}</span>`).join('');
   return '<span class="rep-prev">' + Array.from({ length: it.n }, () => one).join('<span class="sep"></span>') + '</span>';
 }
 // Tocar una flecha del programa la gira (sirve para arreglar "bichitos")
@@ -714,7 +714,15 @@ async function runRobot(p) {
   const r = S.pos[p], steps = flatten(S.prog[p]);
   for (const st of steps) {
     markRun(p, st);
-    const jump = st.d === 'j', dir = jump ? r.face : st.d, k = jump ? 2 : 1;
+    // Recoger: no se mueve; junta la estrella si está parado encima
+    if (st.d === 'j') {
+      const st0 = S.stars.find(s => !s.got && s.x === r.x && s.y === r.y);
+      r.el.classList.remove('hop', 'jump', 'bump'); void r.el.offsetWidth; r.el.classList.add('hop');
+      if (!st0) { Snd.play('bump'); fx(p, '❓'); await sleep(600); r.el.classList.add('dizzy'); return { ok: false, reason: 'empty' }; }
+      st0.got = true; S.got++; st0.el.classList.add('got'); Snd.play('star'); fx(p, '⭐');
+      await sleep(stepMs()); continue;
+    }
+    const jump = false, dir = jump ? r.face : st.d, k = jump ? 2 : 1;
     r.face = dir;
     const [dx, dy] = DIRS[dir], nx = r.x + dx * k, ny = r.y + dy * k;
     if (dx) r.el.classList.toggle('left', dx < 0);
@@ -729,7 +737,7 @@ async function runRobot(p) {
     placeRobot(p, nx, ny); Snd.play(jump ? 'jump' : 'step', p);
     await sleep(stepMs());
     const star = S.stars.find(s => !s.got && s.x === nx && s.y === ny);
-    if (star) { star.got = true; S.got++; star.el.classList.add('got'); Snd.play('star'); }
+    if (star && !S.L.tools.includes('j')) { star.got = true; S.got++; star.el.classList.add('got'); Snd.play('star'); }
     const pad = S.pads.find(pd => pd.x === nx && pd.y === ny);
     if (pad && !S.gatesOpen) {
       pad.el.classList.add('on'); Snd.play('press'); S.gatesOpen = true;
@@ -749,7 +757,7 @@ async function runRobot(p) {
 function fail(p, reason) {
   S.running = false; S.fails++;
   const n = P[p].name;
-  const why = { bump: '💥', edge: '🚫', water: '💦', gate: '🔒', nohome: '🏠 ❓', guess: `${FRUITS[p][S.pick[p]] || ''} ❌`, stars: '⭐ ❓' }[reason] || '💥';
+  const why = { bump: '💥', edge: '🚫', water: '💦', gate: '🔒', nohome: '🏠 ❓', guess: `${FRUITS[p][S.pick[p]] || ''} ❌`, stars: '⭐ ❓', empty: '🧺 ❓' }[reason] || '💥';
   const say = {
     bump: `¡Ups! ${n} se chocó. ¡Prueben otra vez!`,
     edge: `¡Ups! ${n} se quiso salir del mapa.`,
@@ -757,7 +765,8 @@ function fail(p, reason) {
     gate: '¡La puerta está cerrada! Primero hay que pisar el botón rojo.',
     nohome: `¡Casi! ${n} no llegó a su casita.`,
     guess: `¡Uy! ${n} terminó en otro lugar. ¡Miren las flechas otra vez!`,
-    stars: '¡Faltaron estrellas! Hay que juntarlas todas.'
+    stars: '¡Faltaron estrellas! Hay que juntarlas todas con la canasta.',
+    empty: `¡Ups! ${n} quiso juntar, pero ahí no había estrella.`
   }[reason];
   Snd.play('fail');
   setTimeout(() => {
@@ -842,7 +851,6 @@ function bfs(from, to, gatesOpen) {
       return path;
     }
     const steps = Object.values(DIRS).map(([dx, dy]) => [dx, dy]);
-    if (S.L && S.L.tools && S.L.tools.includes('j')) Object.values(DIRS).forEach(([dx, dy]) => steps.push([dx * 2, dy * 2]));
     for (const [dx, dy] of steps) {
       const nx = c.x + dx, ny = c.y + dy, k = key(nx, ny);
       if (k in prev || blocked(nx, ny, gatesOpen)) continue;
@@ -1028,7 +1036,7 @@ function duoReady(p) {
   else { const o = p === 'A' ? 'B' : 'A'; Voice.say(`¡Esperando a ${P[o].name}!`); }
 }
 function duoPlay() {
-  const mk = (p, who) => ({ custom: true, text: '🎨 ' + who, say: `¡Ahora el nivel que inventó ${P[p].name}!`, tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 12, first: 'A', map: DUO[p].grid.map(r => r.join('')) });
+  const mk = (p, who) => ({ custom: true, text: '🎨 ' + who, say: `¡Ahora el nivel que inventó ${P[p].name}!`, tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 14, need: true, first: 'A', map: DUO[p].grid.map(r => r.join('')) });
   const levels = [mk('A', '🤖'), mk('B', '🐱')];
   setTimeout(() => { Snd.play('go'); startLevel(0, levels[0]); S.duo = { levels, i: 0 }; }, 500);
 }
