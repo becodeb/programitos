@@ -10,7 +10,9 @@
   { name: 'La nieve', emoji: '⛄', theme: 'Trabajo en equipo' },
   { name: 'El espacio', emoji: '🚀', theme: 'Repetir' },
   { name: 'El arroyo', emoji: '🐸', theme: 'Recoger' },
-  { name: 'La laguna', emoji: '🦆', theme: 'Recoger y repetir' }
+  { name: 'La laguna', emoji: '🦆', theme: 'Recoger y repetir' },
+  { name: 'El bosque', emoji: '🍄', theme: 'Recoger y caminos' },
+  { name: 'La montaña', emoji: '🏔️', theme: 'Recoger y repetir' }
 ];
 (typeof window !== 'undefined' ? window : globalThis).LEVELS = [
   /* ---------------- Mundo 1: Pradera ---------------- */
@@ -340,5 +342,111 @@
           '.......',
           '.b****B',
           'f.....f']
+  },
+  /* ---------------- Mundo 7: Bosque ---------------- */
+  {
+    name: 'Zigzag', tools: ['u', 'd', 'l', 'r', 'j'], max: 8, need: true,
+    text: '↗️ 🧺 ↘️', say: 'Subí, juntá, bajá y seguí.',
+    map: ['.*.....',
+          'A.*a...',
+          '.......',
+          '...b*.B',
+          '.....*.']
+  },
+  {
+    name: 'El árbol en el medio', tools: ['u', 'd', 'l', 'r', 'j'], max: 9, need: true,
+    text: '🌳 ⭐ 🧺', say: 'Hay un árbol: dale la vuelta por arriba.',
+    map: ['.......',
+          'A*#*a..',
+          '.......',
+          '..b*#*B',
+          '.......']
+  },
+  {
+    name: 'La estrella del fondo', tools: ['r', 'l', 'j'], max: 8, need: true,
+    text: '➡️ 🧺 ⬅️', say: 'La estrella está después de la casita. Andá, juntala y volvé.',
+    map: ['f.....f',
+          'A.a.*..',
+          '.......',
+          '..*.b.B',
+          'f.....f']
+  },
+  {
+    name: 'Charco largo', tools: ['u', 'd', 'l', 'r', 'j'], max: 9, need: true,
+    text: '💦💦 ⭐', say: 'Juntá una, subí, juntá la otra y bajá a tu casita.',
+    map: ['..*....',
+          'A*~~a..',
+          '.......',
+          '..b~~*B',
+          '....*..']
+  },
+  {
+    name: 'Las esquinas', tools: ['u', 'd', 'l', 'r', 'j'], max: 9, need: true,
+    text: '⬆️ ⭐ ➡️ ⭐', say: 'Una estrella arriba y otra lejos.',
+    map: ['*...*..',
+          'A...a..',
+          '.......',
+          '..b...B',
+          '..*...*']
+  },
+  {
+    name: 'Estrellas y puerta', tools: ['u', 'd', 'l', 'r', 'j'], max: 8, need: true, first: 'A',
+    text: '⭐ 🔴 🚪 ⭐', say: 'Tito junta, pisa el botón y junta otra. Lula baja y junta dos.',
+    map: ['A*.o*aB',
+          '######D',
+          'f..b*.*']
+  },
+  /* ---------------- Mundo 8: Montaña ---------------- */
+  {
+    name: 'Subir juntando', tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 4, need: true,
+    text: '🔁 ⬆️ 🧺', say: '¡A subir la montaña! Repetí: subir y juntar.',
+    map: ['a.....b',
+          '*.....*',
+          '*.....*',
+          '*.....*',
+          'A.....B']
+  },
+  {
+    name: 'Fila larga', tools: ['r', 'l', 'j', 'rep'], max: 4, need: true,
+    text: '🔁 ⭐⭐⭐⭐⭐', say: '¡Cinco estrellas! ¿Cuántas veces repetís?',
+    map: ['f.....f',
+          'A*****a',
+          '.......',
+          'b*****B',
+          'f.....f']
+  },
+  {
+    name: 'Primero una, después repetir', tools: ['r', 'l', 'j', 'rep'], max: 7, need: true,
+    text: '⭐ 🔁 ➡️➡️🧺', say: 'Juntá la primera y después repetí: dos pasos y juntar.',
+    map: ['f.....f',
+          'A*.*.*a',
+          '.......',
+          'b*.*.*B',
+          'f.....f']
+  },
+  {
+    name: 'Dos repetir', tools: ['r', 'l', 'j', 'rep'], max: 8, need: true,
+    text: '🔁 ⭐⭐ 🔁 ⭐⭐', say: 'Dos grupos de estrellas: ¡dos repetir!',
+    map: ['f.....f',
+          'A**.**a',
+          '.......',
+          'b**.**B',
+          'f.....f']
+  },
+  {
+    name: 'Repetir y puerta', tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 7, need: true, first: 'A',
+    text: '🔁 🔴 🚪 🔁', say: 'Tito junta y abre la puerta. Lula baja y junta todo.',
+    map: ['A***oaB',
+          '######D',
+          'b****..']
+  },
+  {
+    name: '¡Cumbre!', tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 8, need: true,
+    text: '🏆 ⬆️ 🔁 ⭐', say: '¡El gran final de la montaña!',
+    map: ['*****..',
+          'A....a.',
+          '.......',
+          '.b....B',
+          '..*****']
   }
 ];

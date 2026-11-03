@@ -12,7 +12,7 @@
 }
 body.w1{--g0:#f8e3a6;--g1:#f1d68f;--frame:#c08a4a;--frame2:#a8763c;--sky1:#6fd0ff;--sky2:#fff3c4;--hill1:#ffe08a;--hill2:#f5cf6a}
 body.w2{--g0:#f4f9ff;--g1:#e2eefb;--water:#7fc2f0;--frame:#7a9cc6;--frame2:#5d80ab;--sky1:#a9c9e8;--sky2:#eef6ff;--hill1:#ffffff;--hill2:#e6f0fb}
-body.w5,body.w4{--g0:#a8e6a0;--g1:#97da8e;--water:#5fc9e8;--frame:#6b8f3a;--frame2:#4a6e28;--sky1:#9ee0f0;--sky2:#e6fbd8;--hill1:#7fd68a;--hill2:#5fc374}
+body.w7,body.w6,body.w5,body.w4{--g0:#a8e6a0;--g1:#97da8e;--water:#5fc9e8;--frame:#6b8f3a;--frame2:#4a6e28;--sky1:#9ee0f0;--sky2:#e6fbd8;--hill1:#7fd68a;--hill2:#5fc374}
 body.w3{--g0:#4b4488;--g1:#433d7b;--water:#141030;--frame:#2a2456;--frame2:#18143a;--sky1:#120f33;--sky2:#3d2f7a;--hill1:#5a4ba3;--hill2:#4a3d8f}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden}
