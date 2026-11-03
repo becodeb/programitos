@@ -349,3 +349,15 @@ body.w3 .tile.water{background:radial-gradient(circle,#000 30%,#2a1f63 75%,var(-
 .duo-board .tile{cursor:pointer}
 .duo-board .tile svg{width:84%;height:84%;pointer-events:none}
 @media (max-width:980px){.duo-tools .ed-tool{height:52px;font-size:26px}.duo-tools .ed-tool svg{width:32px;height:32px}.duo-ready{width:96px;height:52px}}
+
+/* Repetir más claro: − número +, vista previa de lo que hace y ✔ para salir */
+.rep-head{gap:5px}
+.rep-m,.rep-p{width:32px;height:32px;padding:0;border-radius:10px;background:#fff;border:3px solid var(--purple);font-weight:700;font-size:22px;line-height:1;color:#6a2fc0;cursor:pointer;touch-action:manipulation}
+.rep-head .rep-n{min-width:38px;height:34px;font-size:22px}
+.rep-m:active,.rep-p:active{transform:scale(.9)}
+.rep-foot{height:auto!important;min-height:14px;display:flex;align-items:center;padding:3px 8px 6px}
+.rep-prev{display:flex;flex-wrap:wrap;align-items:center;gap:1px}
+.rep-prev .mini{width:17px;height:17px;display:grid;place-items:center;font-size:12px}
+.rep-prev .mini svg{width:15px;height:15px}
+.rep-prev .sep{width:3px;height:13px;margin:0 3px;border-radius:2px;background:rgba(255,255,255,.55)}
+.rep-close{height:34px;padding:0 14px;margin:2px 0;border:none;border-radius:10px;background:var(--yellow);font-size:20px;font-weight:700;cursor:pointer}

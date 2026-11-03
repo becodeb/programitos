@@ -272,6 +272,9 @@ function buildPanel(p) {
     if (b.dataset.act) return act(p, b.dataset.act);
     if (b.dataset.pick !== undefined) return pick(p, +b.dataset.pick);
     if (isPredict()) return;
+    if (b.dataset.rm !== undefined) return stepRep(p, +b.dataset.rm, -1);
+    if (b.dataset.rp !== undefined) return stepRep(p, +b.dataset.rp, 1);
+    if (b.dataset.rclose !== undefined) return closeRep(p, +b.dataset.rclose);
     if (b.dataset.n !== undefined) return cycleRep(p, +b.dataset.n);
     if (b.dataset.i !== undefined) return rotateAt(p, +b.dataset.i, b.dataset.j !== undefined ? +b.dataset.j : undefined);
   };
@@ -293,7 +296,7 @@ function act(p, a) {
   } else if (a === 'rep') {
     if (!S.L.tools.includes('rep')) return;
     if (openRep) { openRep.open = false; Snd.play('ready'); }
-    else { if (countOf(p) >= S.L.max) return full(p); prog.push({ t: 'rep', n: 2, body: [], open: true }); S.flash = { p, i: prog.length - 1 }; Snd.play('rep'); }
+    else { if (countOf(p) >= S.L.max) return full(p); prog.push({ t: 'rep', n: 2, body: [], open: true }); S.flash = { p, i: prog.length - 1 }; Snd.play('rep'); Voice.say('Poné adentro lo que se repite.'); }
   } else if (a === 'back') {
     if (!last) return;
     if (last.t === 'rep' && last.body.length) { last.body.pop(); last.open = true; }
@@ -319,6 +322,24 @@ function cycleRep(p, i) {
   it.n = it.n >= 9 ? 2 : it.n + 1; unready(p);
   Snd.play('add', 'u'); tutoDone(p, 'repn'); renderProg(p);
 }
+// Botones − / + del repetir: cambian cuántas veces repite (de 2 a 9) y lo dicen en voz alta
+function stepRep(p, i, k) {
+  const it = S.prog[p][i]; if (!it) return;
+  const n = Math.max(2, Math.min(9, it.n + k));
+  if (n === it.n) return Snd.play('full');
+  it.n = n; unready(p); Snd.play('add', k > 0 ? 'u' : 'd'); tutoDone(p, 'repn'); Voice.say(n + ' veces'); renderProg(p);
+}
+// Botón ✔ al pie de un repetir abierto: lo que se agregue después va afuera
+function closeRep(p, i) {
+  const it = S.prog[p][i]; if (!it || it.t !== 'rep') return;
+  it.open = false; unready(p); Snd.play('ready'); renderProg(p);
+}
+// Vista previa: lo de adentro, repetido n veces, en chiquito
+function repPreview(it) {
+  if (!it.body.length) return '';
+  const one = it.body.map(d => `<span class="mini">${d === 'j' ? '🦘' : arrowSVG(d)}</span>`).join('');
+  return '<span class="rep-prev">' + Array.from({ length: it.n }, () => one).join('<span class="sep"></span>') + '</span>';
+}
 // Tocar una flecha del programa la gira (sirve para arreglar "bichitos")
 function rotateAt(p, i, j) {
   const it = S.prog[p][i]; if (!it) return;
@@ -341,9 +362,9 @@ function renderProg(p) {
   let h = `<div class="hat"><span class="hat-go">▶</span>${dots}</div>`;
   prog.forEach((it, i) => {
     if (it.t === 'm') h += `<button class="blk d-${it.d}${ro}" data-i="${i}">${blkInner(it.d)}</button>`;
-    else h += `<div class="rep${it.open ? ' open' : ''}" data-ri="${i}"><div class="rep-head"><span class="rep-ico">🔁</span><button class="rep-n" data-n="${i}">×${it.n}</button></div><div class="rep-body">` +
+    else h += `<div class="rep${it.open ? ' open' : ''}" data-ri="${i}"><div class="rep-head"><span class="rep-ico">🔁</span><button class="rep-m" data-rm="${i}">−</button><button class="rep-n" data-n="${i}">${it.n}</button><button class="rep-p" data-rp="${i}">+</button></div><div class="rep-body">` +
       it.body.map((d, j) => `<button class="blk d-${d}${ro}" data-i="${i}" data-j="${j}">${blkInner(d)}</button>`).join('') +
-      (it.open || !it.body.length ? '<span class="slot sm">+</span>' : '') + '</div><div class="rep-foot"></div></div>';
+      (it.open || !it.body.length ? '<span class="slot sm">+</span>' : '') + '</div><div class="rep-foot">' + (it.open && it.body.length ? `<button class="rep-close" data-rclose="${i}">✔</button>` : repPreview(it)) + '</div></div>';
   });
   const last0 = prog[prog.length - 1];
   if (!isPredict() && n < max && !(last0 && last0.t === 'rep' && last0.open)) h += '<span class="slot"></span>';
@@ -380,7 +401,7 @@ function dragSource(t, p) {
   const blk = t.closest(`#prog-${p} .blk`);
   if (blk && !blk.classList.contains('ro')) return { kind: 'blk', i: +blk.dataset.i, j: blk.dataset.j !== undefined ? +blk.dataset.j : undefined, el: blk };
   const head = t.closest(`#prog-${p} .rep-head`);
-  if (head && !t.closest('.rep-n')) return { kind: 'blk', i: +head.parentNode.dataset.ri, rep: true, el: head };
+  if (head && !t.closest('.rep-n, .rep-m, .rep-p')) return { kind: 'blk', i: +head.parentNode.dataset.ri, rep: true, el: head };
   return null;
 }
 function dragWhat(d) {
@@ -483,7 +504,7 @@ function applyDrop(d) {
     if (sameRepBody && src.j < bi) bi--;
   }
   if (bi !== undefined) {
-    if (item.rep) { prog.splice(ri, 0, item.rep); S.flash = { p, i: ri }; }
+    if (item.rep) { prog.splice(ri, 0, item.rep); S.flash = { p, i: ri }; if (!item.rep.body.length) Voice.say('Poné adentro lo que se repite.'); }
     else { prog[ri].body.splice(bi, 0, item.d); S.flash = { p, i: ri, j: bi }; }
   } else {
     prog.splice(ri, 0, item.rep || { t: 'm', d: item.d }); S.flash = { p, i: ri };
