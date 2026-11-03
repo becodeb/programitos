@@ -27,7 +27,7 @@ const THEMES = [
   { trees: ['🪨', '⛰️', '🌲', '🪨', '🏔️'], deco: ['🌼', '🐐', '🪨', '🦅', '🌼'] }
 ];
 // Manito guía: qué señalar en cada nivel que presenta algo nuevo
-const TUTO = { 0: ['r', 'ready'], 4: ['pick', 'ready'], 5: ['blk', 'ready'], 18: ['rep', 'r', 'repn', 'ready'], 24: ['j', 'ready'] };
+const TUTO = { 0: ['r', 'ready'], 4: ['pick', 'ready'], 18: ['rep', 'r', 'repn', 'ready'], 24: ['j', 'ready'] };
 
 /* ---------- Dibujos (SVG estáticos, sin animaciones internas) ---------- */
 function titoSVG() {
@@ -279,7 +279,7 @@ function buildPanel(p) {
     if (b.dataset.rp !== undefined) return stepRep(p, +b.dataset.rp, 1);
     if (b.dataset.rclose !== undefined) return closeRep(p, +b.dataset.rclose);
     if (b.dataset.n !== undefined) return cycleRep(p, +b.dataset.n);
-    if (b.dataset.i !== undefined) return rotateAt(p, +b.dataset.i, b.dataset.j !== undefined ? +b.dataset.j : undefined);
+    // Tocar un bloque puesto no hace nada: para sacarlo se arrastra afuera o se usa ⌫
   };
 }
 
