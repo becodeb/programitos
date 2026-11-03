@@ -11,16 +11,18 @@ const ROT = { r: 0, d: 90, l: 180, u: 270 };
 const TURN = ['r', 'd', 'l', 'u'];
 const REP_BODY_MAX = 3;
 const STICKERS = ['🦄', '🐸', '🦖', '🐙', '🦁', '🐼', '🐢', '🦀', '🐬', '🌴', '🍉', '🐳',
-  '🐧', '⛄', '🦊', '🦉', '🦌', '🎿', '🚀', '👽', '🪐', '🛸', '🌟', '👑'];
+  '🐧', '⛄', '🦊', '🦉', '🦌', '🎿', '🚀', '👽', '🪐', '🛸', '🌟', '👑',
+  '🦘', '🐊', '🦋', '🌺', '🐠', '🏅'];
 const FRUITS = { A: ['🍎', '🍌', '🍇'], B: ['🍓', '🍊', '🍉'] };
 const THEMES = [
   { trees: ['🌳', '🌲', '🌳', '🌳', '🌲'], deco: ['🌷', '🌼', '🌸', '🍄', '🌻'] },
   { trees: ['🌴', '🌴', '🌵', '🌴', '🪨'], deco: ['🐚', '🦀', '🐚', '⛱️', '🐚'] },
   { trees: ['🌲', '🎄', '🌲', '⛄', '🌲'], deco: ['❄️', '🐧', '❄️', '⛄', '❄️'] },
-  { trees: ['🪐', '☄️', '🌑', '🪐', '🛰️'], deco: ['✨', '🛸', '✨', '👽', '✨'] }
+  { trees: ['🪐', '☄️', '🌑', '🪐', '🛰️'], deco: ['✨', '🛸', '✨', '👽', '✨'] },
+  { trees: ['🌴', '🌿', '🌳', '🌴', '🌿'], deco: ['🌺', '🦋', '🍀', '🐸', '🌺'] }
 ];
 // Manito guía: qué señalar en cada nivel que presenta algo nuevo
-const TUTO = { 0: ['r', 'ready'], 4: ['pick', 'ready'], 5: ['blk', 'ready'], 18: ['rep', 'r', 'repn', 'ready'] };
+const TUTO = { 0: ['r', 'ready'], 4: ['pick', 'ready'], 5: ['blk', 'ready'], 18: ['rep', 'r', 'repn', 'ready'], 24: ['j', 'ready'] };
 
 /* ---------- Dibujos (SVG estáticos, sin animaciones internas) ---------- */
 function titoSVG() {
@@ -133,6 +135,7 @@ const Snd = {
       case 'clap': this.noise(.12, .5); this.noise(.1, .35, .06); [1046, 1319, 1568, 2093].forEach((f, i) => T(f, .2, 'triangle', .12, .1 + i * .07)); break;
       case 'join': T(arg === 'A' ? 523 : 659, .2, 'triangle', .2); T(arg === 'A' ? 784 : 988, .25, 'triangle', .18, .1); break;
       case 'paint': T(500 + Math.random() * 300, .06, 'triangle', .1); break;
+      case 'jump': T(380, .22, 'sine', .16, 0, 900); T(900, .12, 'triangle', .1, .2, 500); break;
       case 'click': T(700, .05, 'sine', .1); break;
       case 'lift': T(620, .06, 'sine', .09, 0, 760); break;
       case 'drop': T(520, .08, 'triangle', .16, 0, 380); T(760, .08, 'triangle', .1, .05); break;
@@ -173,6 +176,9 @@ const isPredict = () => S.L.mode === 'predict';
 const countOf = p => S.prog[p].reduce((s, it) => s + (it.t === 'rep' ? 1 + it.body.length : 1), 0);
 const stepMs = () => S.fast ? 300 : 520;
 const worldOf = i => Math.floor(i / PER_WORLD);
+// Los mundos desde FREE_FROM (el arroyo) están abiertos desde el principio: avanzan solos con las estrellas
+const FREE_FROM = 4;
+const lvOpen = i => i <= S.save.unlocked || (worldOf(i) >= FREE_FROM && (i % PER_WORLD === 0 || !!S.save.stars[i - 1]));
 const workshopOpen = () => S.save.unlocked >= 2 * PER_WORLD;
 
 function parseProg(s) {
@@ -214,17 +220,17 @@ function join(p) {
 
 /* ---------- Mapa ---------- */
 function openMap() {
-  overlay(null); show('scr-map'); Voice.stop(); setWorld(Math.min(3, worldOf(S.save.unlocked)));
+  overlay(null); show('scr-map'); Voice.stop(); setWorld(Math.min(4, worldOf(S.save.unlocked))); S.duo = null;
   const box = $('#levels'); box.innerHTML = '';
   WORLDS.forEach((W, w) => {
     const row = document.createElement('div');
-    const wLocked = w * PER_WORLD > S.save.unlocked;
+    const wLocked = !lvOpen(w * PER_WORLD);
     row.className = 'world' + (wLocked ? ' locked' : '');
     row.innerHTML = `<div class="w-ico" title="${W.name}">${W.emoji}</div><div class="w-levels"></div>`;
     for (let i = w * PER_WORLD; i < (w + 1) * PER_WORLD && i < LEVELS.length; i++) {
       const L = LEVELS[i], b = document.createElement('button');
-      const st = S.save.stars[i] || 0, locked = i > S.save.unlocked;
-      b.className = 'lv' + (st ? ' done' : '') + (i === S.save.unlocked && !st ? ' current' : '');
+      const st = S.save.stars[i] || 0, locked = !lvOpen(i);
+      b.className = 'lv' + (st ? ' done' : '') + (!locked && !st && (w >= FREE_FROM ? true : i === S.save.unlocked) ? ' current' : '');
       b.disabled = locked;
       const tag = L.mode === 'predict' ? '🤔' : L.pre ? '🐛' : '';
       b.innerHTML = locked ? '<span class="lock">🔒</span>' :
@@ -240,13 +246,14 @@ function openMap() {
 /* ---------- Paneles ---------- */
 function buildPanel(p) {
   const el = $('#panel-' + p), isA = p === 'A';
-  const k = isA ? { u: 'W', l: 'A', d: 'S', r: 'D', rep: 'R', back: 'Q', ready: 'E' }
-                : { u: '↑', l: '←', d: '↓', r: '→', rep: 'Shift', back: '⌫', ready: 'Enter' };
+  const k = isA ? { u: 'W', l: 'A', d: 'S', r: 'D', j: 'F', rep: 'R', back: 'Q', ready: 'E' }
+                : { u: '↑', l: '←', d: '↓', r: '→', j: 'Ctrl', rep: 'Shift', back: '⌫', ready: 'Enter' };
   el.innerHTML = `
     <div class="p-head"><div class="avatar">${P[p].svg()}</div><div class="order" id="order-${p}"></div></div>
     <div class="prog" id="prog-${p}"></div>
     <div class="palette">
       <button class="pal up d-u" data-act="u">${arrowSVG('u')}<span class="key">${k.u}</span></button>
+      <button class="pal jp" data-act="j" style="grid-column:3;grid-row:1"><span class="jico">🦘</span><span class="key">${k.j}</span></button>
       <button class="pal left d-l" data-act="l">${arrowSVG('l')}<span class="key">${k.l}</span></button>
       <button class="pal down d-d" data-act="d">${arrowSVG('d')}<span class="key">${k.d}</span></button>
       <button class="pal right d-r" data-act="r">${arrowSVG('r')}<span class="key">${k.r}</span></button>
@@ -275,7 +282,7 @@ function act(p, a) {
   const prog = S.prog[p], last = prog[prog.length - 1];
   const openRep = last && last.t === 'rep' && last.open ? last : null;
   unready(p);
-  if (DIRS[a]) {
+  if (DIRS[a] || a === 'j') {
     if (!S.L.tools.includes(a)) return;
     if (countOf(p) >= S.L.max) return full(p);
     if (openRep) { openRep.body.push(a); S.flash = { p, i: prog.length - 1, j: openRep.body.length - 1 }; if (openRep.body.length >= REP_BODY_MAX) openRep.open = false; }
@@ -314,7 +321,7 @@ function cycleRep(p, i) {
 function rotateAt(p, i, j) {
   const it = S.prog[p][i]; if (!it) return;
   const dirs = TURN.filter(d => S.L.tools.includes(d)); if (dirs.length < 2) return;
-  const next = d => dirs[(dirs.indexOf(d) + 1) % dirs.length];
+  const next = d => d === 'j' ? d : dirs[(dirs.indexOf(d) + 1) % dirs.length];
   if (j !== undefined) it.body[j] = next(it.body[j]); else if (it.t === 'm') it.d = next(it.d); else return;
   unready(p); Snd.play('add', j !== undefined ? it.body[j] : it.d); tutoDone(p, 'blk'); renderProg(p);
 }
@@ -353,7 +360,7 @@ function renderProg(p) {
 }
 function setTools() {
   for (const p of ['A', 'B']) {
-    ['u', 'd', 'l', 'r'].forEach(d => $(`#panel-${p} [data-act="${d}"]`).classList.toggle('hide', !S.L.tools.includes(d)));
+    ['u', 'd', 'l', 'r', 'j'].forEach(d => $(`#panel-${p} [data-act="${d}"]`).classList.toggle('hide', !S.L.tools.includes(d)));
     $(`#panel-${p} .pal.rp`).style.display = S.L.tools.includes('rep') ? '' : 'none';
     $('#panel-' + p).classList.toggle('mode-predict', isPredict());
     $$(`#panel-${p} .pick-btn`).forEach(b => b.classList.remove('on'));
@@ -492,7 +499,7 @@ function takeItem(p, src) {
 /* ---------- Manito guía ---------- */
 function tutoTarget(p, step) {
   const panel = '#panel-' + p;
-  return { r: `${panel} [data-act="r"]`, ready: `${panel} .ready`, pick: `${panel} .pick-btn`, rep: `${panel} .pal.rp`,
+  return { r: `${panel} [data-act="r"]`, ready: `${panel} .ready`, pick: `${panel} .pick-btn`, rep: `${panel} .pal.rp`, j: `${panel} [data-act="j"]`,
     repn: `${panel} .rep-n`, blk: `${panel} .prog .blk` }[step];
 }
 function placeTuto(p) {
@@ -612,7 +619,8 @@ function resetRun() {
   for (const p of ['A', 'B']) {
     const r = S.pos[p]; r.el.style.transition = 'none';
     placeRobot(p, S.start[p].x, S.start[p].y);
-    r.el.className = 'ent robot r-' + p + (initialLeft(p) ? ' left' : '');
+    r.face = initialLeft(p) ? 'l' : 'r';
+    r.el.className = 'ent robot r-' + p + (r.face === 'l' ? ' left' : '');
     void r.el.offsetWidth; r.el.style.transition = '';
     S.homes[p]?.el.classList.remove('glow');
   }
@@ -666,6 +674,7 @@ async function run() {
     if (!res.ok) return fail(p, res.reason);
     await sleep(250);
   }
+  if (S.L.need && S.stars.length && S.got < S.stars.length) return fail('A', 'stars');
   win();
 }
 async function countdown() {
@@ -681,17 +690,19 @@ async function runRobot(p) {
   const r = S.pos[p], steps = flatten(S.prog[p]);
   for (const st of steps) {
     markRun(p, st);
-    const [dx, dy] = DIRS[st.d], nx = r.x + dx, ny = r.y + dy;
+    const jump = st.d === 'j', dir = jump ? r.face : st.d, k = jump ? 2 : 1;
+    r.face = dir;
+    const [dx, dy] = DIRS[dir], nx = r.x + dx * k, ny = r.y + dy * k;
     if (dx) r.el.classList.toggle('left', dx < 0);
     if (blocked(nx, ny, S.gatesOpen)) {
-      r.el.classList.remove('hop'); void r.el.offsetWidth; r.el.classList.add('bump');
+      r.el.classList.remove('hop', 'jump'); void r.el.offsetWidth; r.el.classList.add('bump');
       Snd.play('bump'); fx(p, '💫');
       await sleep(600); r.el.classList.add('dizzy');
       const c = cellAt(nx, ny);
       return { ok: false, reason: c === null ? 'edge' : c === '~' ? 'water' : c === 'D' ? 'gate' : 'bump' };
     }
-    r.el.classList.remove('hop'); void r.el.offsetWidth; r.el.classList.add('hop');
-    placeRobot(p, nx, ny); Snd.play('step', p);
+    r.el.classList.remove('hop', 'jump'); void r.el.offsetWidth; r.el.classList.add(jump ? 'jump' : 'hop');
+    placeRobot(p, nx, ny); Snd.play(jump ? 'jump' : 'step', p);
     await sleep(stepMs());
     const star = S.stars.find(s => !s.got && s.x === nx && s.y === ny);
     if (star) { star.got = true; S.got++; star.el.classList.add('got'); Snd.play('star'); }
@@ -702,7 +713,7 @@ async function runRobot(p) {
       await sleep(400);
     }
   }
-  r.el.classList.remove('hop');
+  r.el.classList.remove('hop', 'jump');
   let target = S.homes[p];
   if (isPredict()) { const [x, y] = S.L.opts[p][S.pick[p]]; target = { x, y }; }
   if (r.x !== target.x || r.y !== target.y) { r.el.classList.add('sad'); fx(p, '❓'); return { ok: false, reason: isPredict() ? 'guess' : 'nohome' }; }
@@ -714,14 +725,15 @@ async function runRobot(p) {
 function fail(p, reason) {
   S.running = false; S.fails++;
   const n = P[p].name;
-  const why = { bump: '💥', edge: '🚫', water: '💦', gate: '🔒', nohome: '🏠 ❓', guess: `${FRUITS[p][S.pick[p]] || ''} ❌` }[reason] || '💥';
+  const why = { bump: '💥', edge: '🚫', water: '💦', gate: '🔒', nohome: '🏠 ❓', guess: `${FRUITS[p][S.pick[p]] || ''} ❌`, stars: '⭐ ❓' }[reason] || '💥';
   const say = {
     bump: `¡Ups! ${n} se chocó. ¡Prueben otra vez!`,
     edge: `¡Ups! ${n} se quiso salir del mapa.`,
     water: `¡Splash! ${n} se cayó al agua.`,
     gate: '¡La puerta está cerrada! Primero hay que pisar el botón rojo.',
     nohome: `¡Casi! ${n} no llegó a su casita.`,
-    guess: `¡Uy! ${n} terminó en otro lugar. ¡Miren las flechas otra vez!`
+    guess: `¡Uy! ${n} terminó en otro lugar. ¡Miren las flechas otra vez!`,
+    stars: '¡Faltaron estrellas! Hay que juntarlas todas.'
   }[reason];
   Snd.play('fail');
   setTimeout(() => {
@@ -744,7 +756,7 @@ async function win() {
   const total = S.stars.length, rating = (total === 0 || S.got === total) ? 3 : 2;
   if (!S.custom) {
     S.save.stars[S.idx] = Math.max(S.save.stars[S.idx] || 0, rating);
-    S.save.unlocked = Math.max(S.save.unlocked, Math.min(S.idx + 1, LEVELS.length - 1));
+    if (worldOf(S.idx) < FREE_FROM) S.save.unlocked = Math.max(S.save.unlocked, Math.min(S.idx + 1, LEVELS.length - 1));
     save();
   }
   await sleep(900);
@@ -801,7 +813,9 @@ function bfs(from, to, gatesOpen) {
       while (k) { const [x, y] = k.split(',').map(Number); path.unshift({ x, y }); k = prev[k]; }
       return path;
     }
-    for (const [dx, dy] of Object.values(DIRS)) {
+    const steps = Object.values(DIRS).map(([dx, dy]) => [dx, dy]);
+    if (S.L && S.L.tools && S.L.tools.includes('j')) Object.values(DIRS).forEach(([dx, dy]) => steps.push([dx * 2, dy * 2]));
+    for (const [dx, dy] of steps) {
       const nx = c.x + dx, ny = c.y + dy, k = key(nx, ny);
       if (k in prev || blocked(nx, ny, gatesOpen)) continue;
       prev[k] = key(c.x, c.y); q.push({ x: nx, y: ny });
@@ -946,8 +960,8 @@ function checkTeacher() {
 }
 
 /* ---------- Teclado (dos jugadores en la misma compu) ---------- */
-const KEYS_A = { KeyW: 'u', KeyA: 'l', KeyS: 'd', KeyD: 'r', KeyR: 'rep', KeyQ: 'back', KeyE: 'ready' };
-const KEYS_B = { ArrowUp: 'u', ArrowLeft: 'l', ArrowDown: 'd', ArrowRight: 'r', ShiftRight: 'rep', Backspace: 'back', Enter: 'ready', NumpadEnter: 'ready' };
+const KEYS_A = { KeyW: 'u', KeyA: 'l', KeyS: 'd', KeyD: 'r', KeyR: 'rep', KeyF: 'j', KeyQ: 'back', KeyE: 'ready' };
+const KEYS_B = { ArrowUp: 'u', ArrowLeft: 'l', ArrowDown: 'd', ArrowRight: 'r', ShiftRight: 'rep', ControlRight: 'j', Backspace: 'back', Enter: 'ready', NumpadEnter: 'ready' };
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') { if (e.key === 'Enter') checkTeacher(); return; }
   if (e.repeat) return;

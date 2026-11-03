@@ -2,12 +2,14 @@
 // A/B = inicio de Tito/Lula | a/b = casita de Tito/Lula | * estrella
 // o = botón mágico | D = puerta (se abre cuando alguien pisa el botón)
 // mode 'predict': el programa viene armado (pre) y hay que adivinar en qué fruta termina (opts)
+// j = saltar (2 casillas hacia donde mira, por encima de lo que haya en el medio) | need: hay que juntar todas las estrellas
 // pre: programa ya cargado ("rrd", "3(rd)l" = repetir 3 veces → ↓)
 (typeof window !== 'undefined' ? window : globalThis).WORLDS = [
   { name: 'La pradera', emoji: '🌳', theme: 'Secuencias' },
   { name: 'La playa', emoji: '🏖️', theme: 'Giros' },
   { name: 'La nieve', emoji: '⛄', theme: 'Trabajo en equipo' },
-  { name: 'El espacio', emoji: '🚀', theme: 'Repetir' }
+  { name: 'El espacio', emoji: '🚀', theme: 'Repetir' },
+  { name: 'El arroyo', emoji: '🐸', theme: 'Saltar' }
 ];
 (typeof window !== 'undefined' ? window : globalThis).LEVELS = [
   /* ---------------- Mundo 1: Pradera ---------------- */
@@ -231,5 +233,58 @@
           '#f.o#~D',
           'f##.a#.',
           'f##b.*.']
+  },
+  /* ---------------- Mundo 5: Arroyo (saltar) ---------------- */
+  {
+    name: '¡A saltar!', tools: ['j'], max: 2,
+    text: '🦘 💦', say: '¡Bloque nuevo: saltar! Tocá el canguro y saltá el charco.',
+    map: ['f.....f',
+          '.A~a...',
+          '.......',
+          '...b~B.',
+          'f.....f']
+  },
+  {
+    name: 'Caminar y saltar', tools: ['r', 'l', 'j'], max: 4,
+    text: '➡️ 🦘 ➡️', say: 'Un paso, un salto y otro paso.',
+    map: ['f.....f',
+          'A.~.a..',
+          '.......',
+          '..b.~.B',
+          'f.....f']
+  },
+  {
+    name: 'Saltos con estrellas', tools: ['u', 'd', 'l', 'r', 'j'], max: 5, need: true,
+    text: '⭐ 🦘 ⭐', say: '¡Junten todas las estrellas y salten el charco!',
+    map: ['f.....f',
+          'A*.~.*a',
+          '.......',
+          'b*.~.*B',
+          'f.....f']
+  },
+  {
+    name: 'La puerta del arroyo', tools: ['u', 'd', 'l', 'r', 'j'], max: 5, first: 'A',
+    text: '🦘 🔴 🚪', say: 'Tito salta el charco y pisa el botón rojo para abrirle a Lula.',
+    map: ['A.~oa.B',
+          '######D',
+          'f....fb']
+  },
+  {
+    name: 'Saltar y repetir', tools: ['r', 'l', 'j', 'rep'], max: 4,
+    text: '🔁 🦘', say: '¡Muchos charcos! Repetí el salto.',
+    map: ['f.....f',
+          'A~.~.~a',
+          '.......',
+          'B.~.~.b',
+          'f.....f']
+  },
+  {
+    name: '¡Gran salto!', tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 5, first: 'A', need: true,
+    text: '🏆 🦘 🔁', say: '¡El gran final! Saltos, repetir, puerta y estrella.',
+    map: ['A~.~.~o',
+          '#####.a',
+          'B*.....',
+          '###D###',
+          '...b...']
   }
 ];
