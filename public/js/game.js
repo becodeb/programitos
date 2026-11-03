@@ -70,6 +70,7 @@ function gateSVG() {
   <rect x="4" y="30" width="92" height="12" rx="4"/><rect x="4" y="64" width="92" height="12" rx="4"/></g>
   <circle cx="50" cy="52" r="14" fill="#ffd23f" stroke="#c99a00" stroke-width="3"/><rect x="45" y="50" width="10" height="9" rx="2" fill="#7a4518"/><path d="M46 50 v-4 a4 4 0 0 1 8 0 v4" stroke="#7a4518" stroke-width="2.5" fill="none"/></svg>`;
 }
+function blkInner(d) { return d === 'j' ? '<span class="jico">🦘</span>' : arrowSVG(d); }
 function arrowSVG(dir) {
   return `<svg viewBox="0 0 40 40" style="transform:rotate(${ROT[dir]}deg)"><path d="M5 15h17V7l14 13-14 13v-8H5z" fill="#fff" stroke="rgba(0,0,0,.25)" stroke-width="2" stroke-linejoin="round"/></svg>`;
 }
@@ -133,6 +134,8 @@ const Snd = {
       case 'join': T(arg === 'A' ? 523 : 659, .2, 'triangle', .2); T(arg === 'A' ? 784 : 988, .25, 'triangle', .18, .1); break;
       case 'paint': T(500 + Math.random() * 300, .06, 'triangle', .1); break;
       case 'click': T(700, .05, 'sine', .1); break;
+      case 'lift': T(620, .06, 'sine', .09, 0, 760); break;
+      case 'drop': T(520, .08, 'triangle', .16, 0, 380); T(760, .08, 'triangle', .1, .05); break;
     }
   }
 };
@@ -275,13 +278,13 @@ function act(p, a) {
   if (DIRS[a]) {
     if (!S.L.tools.includes(a)) return;
     if (countOf(p) >= S.L.max) return full(p);
-    if (openRep) { openRep.body.push(a); if (openRep.body.length >= REP_BODY_MAX) openRep.open = false; }
-    else prog.push({ t: 'm', d: a });
+    if (openRep) { openRep.body.push(a); S.flash = { p, i: prog.length - 1, j: openRep.body.length - 1 }; if (openRep.body.length >= REP_BODY_MAX) openRep.open = false; }
+    else { prog.push({ t: 'm', d: a }); S.flash = { p, i: prog.length - 1 }; }
     Snd.play('add', a); pressFx(p, a);
   } else if (a === 'rep') {
     if (!S.L.tools.includes('rep')) return;
     if (openRep) { openRep.open = false; Snd.play('ready'); }
-    else { if (countOf(p) >= S.L.max) return full(p); prog.push({ t: 'rep', n: 2, body: [], open: true }); Snd.play('rep'); }
+    else { if (countOf(p) >= S.L.max) return full(p); prog.push({ t: 'rep', n: 2, body: [], open: true }); S.flash = { p, i: prog.length - 1 }; Snd.play('rep'); }
   } else if (a === 'back') {
     if (!last) return;
     if (last.t === 'rep' && last.body.length) { last.body.pop(); last.open = true; }
@@ -328,14 +331,19 @@ function renderProg(p) {
   const dots = isPredict() ? '' : `<span class="dots">${'●'.repeat(Math.min(n, 14))}<i>${'●'.repeat(Math.max(0, Math.min(max, 14) - n))}</i></span>`;
   let h = `<div class="hat"><span class="hat-go">▶</span>${dots}</div>`;
   prog.forEach((it, i) => {
-    if (it.t === 'm') h += `<button class="blk d-${it.d}${ro}" data-i="${i}">${arrowSVG(it.d)}</button>`;
+    if (it.t === 'm') h += `<button class="blk d-${it.d}${ro}" data-i="${i}">${blkInner(it.d)}</button>`;
     else h += `<div class="rep${it.open ? ' open' : ''}" data-ri="${i}"><div class="rep-head"><span class="rep-ico">🔁</span><button class="rep-n" data-n="${i}">×${it.n}</button></div><div class="rep-body">` +
-      it.body.map((d, j) => `<button class="blk d-${d}${ro}" data-i="${i}" data-j="${j}">${arrowSVG(d)}</button>`).join('') +
-      (it.open ? '<span class="slot">+</span>' : '') + '</div><div class="rep-foot"></div></div>';
+      it.body.map((d, j) => `<button class="blk d-${d}${ro}" data-i="${i}" data-j="${j}">${blkInner(d)}</button>`).join('') +
+      (it.open || !it.body.length ? '<span class="slot sm">+</span>' : '') + '</div><div class="rep-foot"></div></div>';
   });
   const last0 = prog[prog.length - 1];
   if (!isPredict() && n < max && !(last0 && last0.t === 'rep' && last0.open)) h += '<span class="slot"></span>';
   $('#prog-' + p).innerHTML = h;
+  if (S.flash && S.flash.p === p) {
+    const f = S.flash; S.flash = null;
+    const el = $(`#prog-${p} ` + (f.j !== undefined ? `.blk[data-i="${f.i}"][data-j="${f.j}"]` : `.blk[data-i="${f.i}"]:not([data-j]), #prog-${p} .rep[data-ri="${f.i}"]`));
+    if (el) el.classList.add('dropped');
+  }
   const last = prog[prog.length - 1], open = last && last.t === 'rep' && last.open;
   const rp = $(`#panel-${p} .pal.rp`);
   rp.classList.toggle('closing', !!open);
@@ -352,6 +360,133 @@ function setTools() {
     const first = (S.L.first || 'A') === p, coop = S.L.map.some(r => r.includes('o'));
     $('#order-' + p).textContent = coop ? (first ? '1️⃣' : '2️⃣') : '';
   }
+}
+
+/* ---------- Arrastrar y soltar (mouse o dedo, un puntero por chico) ---------- */
+const DRAG = new Map();            // pointerId -> estado del arrastre
+let suppressClick = false;
+function dragSource(t, p) {
+  const pal = t.closest('.pal');
+  if (pal && ['u', 'd', 'l', 'r', 'j', 'rep'].includes(pal.dataset.act)) return { kind: 'pal', act: pal.dataset.act, el: pal };
+  const blk = t.closest(`#prog-${p} .blk`);
+  if (blk && !blk.classList.contains('ro')) return { kind: 'blk', i: +blk.dataset.i, j: blk.dataset.j !== undefined ? +blk.dataset.j : undefined, el: blk };
+  const head = t.closest(`#prog-${p} .rep-head`);
+  if (head && !t.closest('.rep-n')) return { kind: 'blk', i: +head.parentNode.dataset.ri, rep: true, el: head };
+  return null;
+}
+function dragWhat(d) {
+  if (d.src.kind === 'pal') return d.src.act;
+  const it = S.prog[d.p][d.src.i]; if (!it) return null;
+  if (d.src.j !== undefined) return it.body[d.src.j];
+  return it.t === 'rep' ? 'rep' : it.d;
+}
+document.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  if (S.running || S.overlay || !S.L || !$('#scr-game').classList.contains('active') || isPredict()) return;
+  const panel = e.target.closest && e.target.closest('.panel'); if (!panel) return;
+  const p = panel.dataset.p, src = dragSource(e.target, p); if (!src) return;
+  if (src.kind === 'pal' && !S.L.tools.includes(src.act)) return;
+  DRAG.set(e.pointerId, { p, src, sx: e.clientX, sy: e.clientY, on: false });
+  try { src.el.setPointerCapture(e.pointerId); } catch (err) {}
+});
+document.addEventListener('pointermove', e => {
+  const d = DRAG.get(e.pointerId); if (!d) return;
+  if (!d.on) { if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 8) return; startDrag(d); }
+  if (!d.on) return;
+  d.ghost.style.transform = `translate(${e.clientX - 34}px,${e.clientY - 28}px) scale(1.1)`;
+  updateTarget(d, e);
+});
+document.addEventListener('pointerup', e => endDrag(e, false));
+document.addEventListener('pointercancel', e => endDrag(e, true));
+document.addEventListener('click', e => { if (suppressClick) { suppressClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
+
+function startDrag(d) {
+  const what = dragWhat(d); if (!what) { DRAG.forEach((v, k) => v === d && DRAG.delete(k)); return; }
+  d.on = true; d.what = what; suppressClick = true; unreadyOnDrag(d.p);
+  const g = document.createElement('div');
+  g.className = 'ghost ' + (what === 'rep' ? 'g-rep' : 'd-' + what);
+  g.innerHTML = what === 'rep' ? '<span>🔁</span>' : blkInner(what);
+  document.body.appendChild(g); d.ghost = g;
+  const m = document.createElement('div'); m.className = 'ins-marker ' + d.p; m.style.display = 'none';
+  document.body.appendChild(m); d.marker = m;
+  if (d.src.kind === 'blk') d.src.el.classList.add('dragging');
+  $('#prog-' + d.p).classList.add('drag-on');
+  Snd.play('lift');
+}
+function unreadyOnDrag(p) { unready(p); }
+function calcTarget(d, e, pr) {
+  const prog = S.prog[d.p], y = e.clientY;
+  const kids = [...pr.children].filter(c => c.dataset.i !== undefined || c.dataset.ri !== undefined);
+  const idx = c => +(c.dataset.i !== undefined ? c.dataset.i : c.dataset.ri);
+  for (const c of kids) {
+    const r = c.getBoundingClientRect();
+    if (c.classList.contains('rep') && d.what !== 'rep' && y >= r.top + 20 && y <= r.bottom) {
+      const ri = idx(c), body = c.querySelector('.rep-body'), bk = [...body.querySelectorAll('.blk')], br = body.getBoundingClientRect();
+      let bi = bk.length;
+      for (let k = 0; k < bk.length; k++) { const q = bk[k].getBoundingClientRect(); if (y < q.top + q.height / 2) { bi = k; break; } }
+      const my = bi < bk.length ? bk[bi].getBoundingClientRect().top : (bk.length ? bk[bk.length - 1].getBoundingClientRect().bottom : br.top + 2);
+      const sameRep = d.src.kind === 'blk' && d.src.j !== undefined && d.src.i === ri;
+      const full = prog[ri].body.length - (sameRep ? 1 : 0) >= REP_BODY_MAX;
+      return { ri, bi, full, mark: { x: br.left, w: br.width, y: my } };
+    }
+    if (y < r.top + r.height / 2) return { ri: idx(c), mark: { x: r.left, w: r.width, y: r.top } };
+  }
+  const last = kids[kids.length - 1];
+  if (last) { const r = last.getBoundingClientRect(); return { ri: prog.length, mark: { x: r.left, w: r.width, y: r.bottom } }; }
+  const h = pr.querySelector('.hat').getBoundingClientRect();
+  return { ri: prog.length, mark: { x: h.left, w: h.width, y: h.bottom } };
+}
+function updateTarget(d, e) {
+  const pr = $('#prog-' + d.p), r = pr.getBoundingClientRect();
+  const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  d.tgt = inside ? calcTarget(d, e, pr) : null;
+  const m = d.marker;
+  if (d.tgt) { m.style.display = 'block'; m.style.left = d.tgt.mark.x + 'px'; m.style.top = (d.tgt.mark.y - 5) + 'px'; m.style.width = d.tgt.mark.w + 'px'; m.classList.toggle('bad', !!d.tgt.full); }
+  else m.style.display = 'none';
+  pr.classList.toggle('drop-on', !!d.tgt);
+  d.ghost.classList.toggle('del', d.src.kind === 'blk' && !d.tgt);
+}
+function endDrag(e, cancel) {
+  const d = DRAG.get(e.pointerId); if (!d) return;
+  DRAG.delete(e.pointerId);
+  if (!d.on) return;
+  d.ghost.remove(); d.marker.remove();
+  $('#prog-' + d.p).classList.remove('drop-on', 'drag-on');
+  d.src.el.classList.remove('dragging');
+  setTimeout(() => { suppressClick = false; }, 60);
+  if (cancel || S.running || S.overlay) return;
+  applyDrop(d);
+}
+function applyDrop(d) {
+  const p = d.p, prog = S.prog[p], t = d.tgt, src = d.src;
+  if (!t) {                                    // soltó afuera: si venía del programa, se borra
+    if (src.kind !== 'blk') return;
+    takeItem(p, src); Snd.play('del'); return renderProg(p);
+  }
+  if (t.full) return full(p);
+  if (src.kind === 'pal' && countOf(p) >= S.L.max) return full(p);
+  let ri = t.ri, bi = t.bi, item;
+  if (src.kind === 'pal') item = src.act === 'rep' ? { rep: { t: 'rep', n: 2, body: [], open: false } } : { d: src.act };
+  else {
+    const sameRepBody = src.j !== undefined && bi !== undefined && src.i === ri;
+    item = takeItem(p, src);
+    if (src.j === undefined && src.i < ri) ri--;              // el de arriba salió: todo sube un lugar
+    if (sameRepBody && src.j < bi) bi--;
+  }
+  if (bi !== undefined) {
+    if (item.rep) { prog.splice(ri, 0, item.rep); S.flash = { p, i: ri }; }
+    else { prog[ri].body.splice(bi, 0, item.d); S.flash = { p, i: ri, j: bi }; }
+  } else {
+    prog.splice(ri, 0, item.rep || { t: 'm', d: item.d }); S.flash = { p, i: ri };
+  }
+  Snd.play('drop'); if (item.d) tutoDone(p, item.d); else tutoDone(p, 'rep');
+  renderProg(p);
+}
+function takeItem(p, src) {
+  const prog = S.prog[p];
+  if (src.j !== undefined) return { d: prog[src.i].body.splice(src.j, 1)[0] };
+  const it = prog.splice(src.i, 1)[0];
+  return it.t === 'rep' ? { rep: it } : { d: it.d };
 }
 
 /* ---------- Manito guía ---------- */

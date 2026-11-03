@@ -284,7 +284,7 @@ body.w3 .tile.water{background:radial-gradient(circle,#000 30%,#2a1f63 75%,var(-
 .hat-go{width:30px;height:30px;border-radius:50%;background:#fff;color:#ffb703;display:grid;place-items:center;font-size:16px;padding-left:3px}
 .dots{font-size:11px;letter-spacing:1px;color:#fff;line-height:1;word-break:break-all}
 .dots i{font-style:normal;opacity:.35}
-.prog .blk,.prog .blk.sm{width:100%;height:44px;border-radius:6px;display:flex;justify-content:flex-start;padding-left:12px;margin-top:-2px;position:relative;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18);animation:snap .18s ease-out}
+.prog .blk,.prog .blk.sm{width:100%;height:44px;border-radius:6px;display:flex;justify-content:flex-start;padding-left:12px;margin-top:-2px;position:relative;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18);animation:none}
 .prog .blk svg{width:30px;height:30px}
 .prog .hat::after,.prog .blk::after,.rep-head::after,.rep-foot::after{content:"";position:absolute;left:18px;bottom:-7px;width:22px;height:9px;border-radius:0 0 6px 6px;background:inherit;z-index:2}
 .prog .blk{z-index:1}
@@ -303,4 +303,26 @@ body.w3 .tile.water{background:radial-gradient(circle,#000 30%,#2a1f63 75%,var(-
 .prog .slot{width:100%;height:44px;margin-top:4px;border-radius:6px;border:3px dashed #c9c9de;background:rgba(255,255,255,.7);display:grid;place-items:center;color:var(--purple);font-weight:700;font-size:22px}
 .rep-body .slot{margin:4px 0 4px;border-color:var(--purple);height:40px}
 @keyframes snap{from{transform:translateX(30px);opacity:0}}
-.prog .blk,.prog .blk.sm,.prog .slot{height:38px}.hat,.rep-head{height:40px}.rep-foot{height:14px}.prog .blk svg{width:26px;height:26px}
+.prog .blk,.prog .blk.sm,.prog .slot{height:48px}.hat,.rep-head{height:44px}.rep-foot{height:14px}.prog .blk svg{width:28px;height:28px}
+
+/* ---------- Arrastrar y soltar ---------- */
+.pal,.prog .blk,.rep-head,.ed-tool,.duo-board{touch-action:none}
+.pal{cursor:grab}.prog .blk,.rep-head{cursor:grab}
+.pal.hide{visibility:hidden}
+.prog .blk.dropped,.rep.dropped>.rep-head{animation:dropin .32s cubic-bezier(.3,1.6,.5,1)}
+@keyframes dropin{from{transform:scale(1.18)}}
+.prog .blk.dragging,.rep-head.dragging{opacity:.3}
+.prog.drag-on{border-color:#c9c9de}
+.prog.drop-on{border-color:var(--pc);background-color:var(--pl)}
+.ghost{position:fixed;left:0;top:0;z-index:100;pointer-events:none;width:68px;height:56px;border-radius:14px;display:grid;place-items:center;
+  box-shadow:0 12px 18px rgba(0,0,0,.3),inset 0 -4px 0 rgba(0,0,0,.18);opacity:.95;will-change:transform;font-size:28px;color:#fff}
+.ghost svg{width:34px;height:34px}
+.ghost.g-rep{background:var(--purple)}
+.ghost.del{background:#e63946!important}
+.ghost.del::after{content:"🗑️";position:absolute;right:-10px;top:-14px;font-size:22px}
+.ins-marker{position:fixed;z-index:99;height:10px;border-radius:6px;background:var(--yellow);box-shadow:0 0 0 3px #fff,0 0 10px rgba(0,0,0,.35);pointer-events:none}
+.ins-marker.A{background:var(--a)}.ins-marker.B{background:var(--b)}.ins-marker.bad{background:#e63946}
+.jico{font-size:26px;line-height:1}
+.d-j{background:#ff6b6b}
+.pal.jp{background:#ff6b6b;font-size:34px;color:#fff}
+@media (max-height:720px) and (min-width:981px){.prog .blk,.prog .slot{height:48px}}
