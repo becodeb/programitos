@@ -539,6 +539,7 @@ function unready(p) {
 
 /* ---------- Nivel ---------- */
 function startLevel(i, customL) {
+  if (!customL) S.duo = null;
   S.custom = !!customL; S.idx = i; S.L = customL || LEVELS[i]; S.fails = 0;
   S.prog = { A: parseProg(S.L.pre?.A), B: parseProg(S.L.pre?.B) };
   S.ready = { A: false, B: false }; S.pick = { A: null, B: null };
@@ -776,6 +777,10 @@ function highFive(p) {
   if (!(S.hf.A && S.hf.B)) return;
   $('#ov-win .hf-btns').classList.add('clap'); Snd.play('clap'); confetti(60);
   setTimeout(() => {
+    if (S.custom && S.duo) {
+      if (S.duo.i + 1 < S.duo.levels.length) { S.duo.i++; return startLevel(0, S.duo.levels[S.duo.i]); }
+      return openDuo();
+    }
     if (S.custom) return openEditor();
     const next = S.idx + 1;
     if (next >= LEVELS.length) return finale();
@@ -896,23 +901,113 @@ function edPaint(t) {
   if ('AaBb'.includes(c)) ED.grid.forEach(r => r.forEach((v, i) => { if (v === c) r[i] = '.'; }));
   ED.grid[y][x] = c; Snd.play('paint'); edRender();
 }
+// Devuelve null si el nivel se puede jugar, o lo que hay que decir si no
+function edValidate(map, jump) {
+  const has = c => map.some(r => r.includes(c));
+  if (!has('A') || !has('a')) return 'Falta Tito o su casita.';
+  if (!has('B') || !has('b')) return 'Falta Lula o su casita.';
+  // Probamos que se pueda resolver: Tito camina primero (puede abrir la puerta)
+  S.L = { map, mode: null, tools: jump ? ['j'] : [] }; parseLevel(); S.idx = 0;
+  const A = bfs(S.start.A, S.homes.A, false).length, B = bfs(S.start.B, S.homes.B, true).length;
+  if (!A) return '¡Tito no puede llegar a su casita!';
+  if (!B) return '¡Lula no puede llegar a su casita!';
+  if (S.gates.length && (!S.pads.length || !bfs(S.start.A, S.pads[0], false).length)) return 'Tito tiene que poder pisar el botón rojo.';
+  return null;
+}
 function edPlay() {
   const map = ED.grid.map(r => r.join(''));
-  const has = c => map.some(r => r.includes(c));
-  let say = null;
-  if (!has('A') || !has('a')) say = 'Falta Tito o su casita.';
-  else if (!has('B') || !has('b')) say = 'Falta Lula o su casita.';
-  if (!say) {
-    // Probamos que se pueda resolver: Tito camina primero (puede abrir la puerta)
-    S.L = { map, mode: null }; parseLevel(); S.idx = 0;
-    const A = bfs(S.start.A, S.homes.A, false).length, B = bfs(S.start.B, S.homes.B, true).length;
-    if (!A) say = '¡Tito no puede llegar a su casita!';
-    else if (!B) say = '¡Lula no puede llegar a su casita!';
-    else if (S.gates.length && (!S.pads.length || !bfs(S.start.A, S.pads[0], false).length)) say = 'Tito tiene que poder pisar el botón rojo.';
-  }
-  if (say) { Snd.play('fail'); Voice.say(say); const b = $('#ed-board'); b.classList.remove('shake'); b.animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'none' }], 300); return; }
+  const say = edValidate(map, false);
+  if (say) { Snd.play('fail'); Voice.say(say); const b = $('#ed-board'); b.animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'none' }], 300); return; }
   Snd.play('go');
   startLevel(0, { custom: true, text: '🛠️ ⭐', say: '¡A jugar su nivel!', tools: ['u', 'd', 'l', 'r', 'rep'], max: 12, first: 'A', map });
+}
+
+/* ---------- Inventores: pantalla dividida, cada chico inventa un nivel ---------- */
+const DUO_TOOLS = [
+  { c: 'A', ico: titoSVG }, { c: 'a', ico: () => houseSVG(P.A.color, P.A.dark) },
+  { c: 'B', ico: lulaSVG }, { c: 'b', ico: () => houseSVG(P.B.color, P.B.dark) },
+  { c: '#', ico: () => '🌳' }, { c: '~', ico: () => '💦' }, { c: '*', ico: () => '⭐' }, { c: '.', ico: () => '🧽' }
+];
+const DUO = { A: null, B: null };
+function duoDefault() {
+  return ['A.....a', '.......', '.......', '.......', 'B.....b'].map(r => r.split(''));
+}
+function duoCell(c) {
+  return c === '#' ? '🌳' : c === '*' ? '⭐' : c === 'A' ? titoSVG() : c === 'B' ? lulaSVG()
+    : c === 'a' ? houseSVG(P.A.color, P.A.dark) : c === 'b' ? houseSVG(P.B.color, P.B.dark) : '';
+}
+function duoDraw(p) {
+  const st = DUO[p];
+  $$(`#duo-board-${p} .tile`).forEach(t => {
+    const c = st.grid[+t.dataset.y][+t.dataset.x], x = +t.dataset.x, y = +t.dataset.y;
+    t.className = 'tile ' + (c === '~' ? 'water' : 'g' + ((x + y) % 2));
+    t.innerHTML = duoCell(c);
+  });
+}
+function duoFit() {
+  ['A', 'B'].forEach(p => { const w = $('#duo-wrap-' + p); if (w && w.clientWidth) fitBoard($('#duo-board-' + p), w, ED_COLS, ED_ROWS); });
+}
+function duoBuild(p) {
+  const k = p === 'A' ? 'E' : 'Enter';
+  DUO[p] = { grid: duoDefault(), tool: '#', ready: false };
+  const half = $('#duo-' + p);
+  half.className = 'duo-half h-' + p;
+  half.innerHTML = `<div class="duo-head"><div class="avatar">${P[p].svg()}</div>
+      <button class="duo-ready" data-duo-ready="${p}"><span class="ready-txt">✅</span><span class="key">${k}</span></button></div>
+    <div class="duo-tools">${DUO_TOOLS.map(t => `<button class="ed-tool${t.c === '#' ? ' on' : ''}" data-c="${t.c}">${t.ico()}</button>`).join('')}</div>
+    <div class="board-wrap" id="duo-wrap-${p}"><div class="board duo-board" id="duo-board-${p}"></div></div>`;
+  const b = $('#duo-board-' + p);
+  let tiles = '';
+  for (let y = 0; y < ED_ROWS; y++) for (let x = 0; x < ED_COLS; x++) tiles += `<div class="tile" data-x="${x}" data-y="${y}" style="--x:${x};--y:${y}"></div>`;
+  b.innerHTML = tiles;
+  half.querySelectorAll('[data-c]').forEach(t => t.onclick = () => {
+    DUO[p].tool = t.dataset.c; Snd.play('click');
+    half.querySelectorAll('[data-c]').forEach(x => x.classList.toggle('on', x === t));
+  });
+  half.querySelector('[data-duo-ready]').onclick = () => duoReady(p);
+  // Pintar tocando o arrastrando; cada dedo/puntero va por su cuenta, así los dos chicos pintan a la vez
+  const painting = new Set();
+  const paintAt = e => {
+    const t = document.elementFromPoint(e.clientX, e.clientY);
+    const tile = t && t.closest && t.closest('.tile');
+    if (!tile || tile.parentNode !== b) return;
+    const x = +tile.dataset.x, y = +tile.dataset.y, c = DUO[p].tool, g = DUO[p].grid;
+    if (g[y][x] === c) return;
+    if ('AaBb'.includes(c)) g.forEach(r => r.forEach((v, i) => { if (v === c) r[i] = '.'; }));
+    g[y][x] = c; duoUnready(p); Snd.play('paint'); duoDraw(p);
+  };
+  b.addEventListener('pointerdown', e => { try { b.setPointerCapture(e.pointerId); } catch (err) {} painting.add(e.pointerId); paintAt(e); });
+  b.addEventListener('pointermove', e => { if (painting.has(e.pointerId)) paintAt(e); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n => b.addEventListener(n, e => painting.delete(e.pointerId)));
+  duoDraw(p);
+}
+function duoUnready(p) {
+  DUO[p].ready = false;
+  const h = $('#duo-' + p); h.classList.remove('ready'); h.querySelector('.ready-txt').textContent = '✅';
+}
+function openDuo() {
+  overlay(null); Voice.stop(); setWorld(0); S.duo = null; show('scr-duo');
+  duoBuild('A'); duoBuild('B'); duoFit();
+  Voice.say('¡Inventores! Cada uno inventa su nivel. Elijan un dibujo y toquen el tablero. Cuando terminen, toquen el botón verde.');
+}
+function duoReady(p) {
+  if (!$('#scr-duo').classList.contains('active') || !DUO[p]) return;
+  if (DUO[p].ready) { duoUnready(p); Snd.play('del'); return; }
+  const say = edValidate(DUO[p].grid.map(r => r.join('')), true);
+  const h = $('#duo-' + p);
+  if (say) {
+    Snd.play('fail'); Voice.say(say);
+    h.animate([{ transform: 'translateX(-10px)' }, { transform: 'translateX(10px)' }, { transform: 'translateX(-6px)' }, { transform: 'none' }], 350);
+    return;
+  }
+  DUO[p].ready = true; h.classList.add('ready'); h.querySelector('.ready-txt').textContent = '👍'; Snd.play('ready');
+  if (DUO.A.ready && DUO.B.ready) duoPlay();
+  else { const o = p === 'A' ? 'B' : 'A'; Voice.say(`¡Esperando a ${P[o].name}!`); }
+}
+function duoPlay() {
+  const mk = (p, who) => ({ custom: true, text: '🎨 ' + who, say: `¡Ahora el nivel que inventó ${P[p].name}!`, tools: ['u', 'd', 'l', 'r', 'j', 'rep'], max: 12, first: 'A', map: DUO[p].grid.map(r => r.join('')) });
+  const levels = [mk('A', '🤖'), mk('B', '🐱')];
+  setTimeout(() => { Snd.play('go'); startLevel(0, levels[0]); S.duo = { levels, i: 0 }; }, 500);
 }
 
 /* ---------- Confeti (liviano) ---------- */
@@ -970,6 +1065,7 @@ document.addEventListener('keydown', e => {
   if (pB) e.preventDefault();
   const A = e.code === 'KeyE', B = pB === 'ready';
   if (scr === 'scr-start') { if (A) join('A'); if (B) join('B'); return; }
+  if (scr === 'scr-duo' && !S.overlay) { if (A) duoReady('A'); if (B) duoReady('B'); return; }
   if (S.overlay === 'ov-win') { if (A) highFive('A'); if (B) highFive('B'); return; }
   if (S.overlay === 'ov-world') { if (A) swapReady('A'); if (B) swapReady('B'); return; }
   if (S.overlay === 'ov-fail') { if (A || B || e.code === 'Space') retry(); return; }
@@ -988,7 +1084,7 @@ function init() {
   initStart(); buildPanel('A'); buildPanel('B'); syncToggles();
   document.addEventListener('pointerdown', () => Snd.init(), { once: true });
   $('#map-back').onclick = () => show('scr-start');
-  $('#btn-map').onclick = () => { if (S.running) return; S.custom ? openEditor() : openMap(); };
+  $('#btn-map').onclick = () => { if (S.running) return; S.custom && !S.duo ? openEditor() : openMap(); };
   $('#btn-hint').onclick = hint;
   $('#btn-say').onclick = () => Voice.say(S.L?.say || $('#bubble-text').textContent);
   $('#btn-speed').onclick = () => { S.fast = !S.fast; syncToggles(); Snd.play('click'); };
@@ -1000,6 +1096,8 @@ function init() {
   $$('[data-sw]').forEach(b => b.onclick = () => swapReady(b.dataset.sw));
   $('#btn-album').onclick = openAlbum;
   $('#btn-workshop').onclick = openEditor;
+  $('#btn-duo').onclick = () => { Snd.play('click'); openDuo(); };
+  $('#duo-back').onclick = openMap;
   $('#final-album').onclick = openAlbum;
   $('#final-workshop').onclick = openEditor;
   $('#final-map').onclick = openMap;
@@ -1017,10 +1115,12 @@ function init() {
   window.addEventListener('pointerup', () => ED.painting = false);
   const onResize = () => {
     sizeBoard();
+    if ($('#scr-duo').classList.contains('active')) duoFit();
     if ($('#scr-editor').classList.contains('active')) fitBoard($('#ed-board'), $('#ed-wrap'), ED_COLS, ED_ROWS);
     if (S.tuto) ['A', 'B'].forEach(placeTuto);
   };
   window.addEventListener('resize', onResize);
   new ResizeObserver(onResize).observe($('#board-wrap'));
+  $$('.duo-half').forEach(h => new ResizeObserver(duoFit).observe(h));
 }
 init();

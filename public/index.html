@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 <div class="sky">
@@ -34,6 +34,7 @@
   <header class="topbar">
     <button class="icon-btn" id="map-back" title="Inicio">🏠</button>
     <div class="tools">
+      <button class="icon-btn" id="btn-duo" title="Inventores: cada uno inventa un nivel">🎨</button>
       <button class="icon-btn" id="btn-workshop" title="Taller: inventar un nivel">🛠️</button>
       <button class="icon-btn" id="btn-album" title="Álbum de figuritas">📒</button>
       <button class="icon-btn snd-toggle" title="Sonido">🔊</button>
@@ -78,6 +79,18 @@
   <div class="ed-grid">
     <div class="ed-tools" id="ed-tools"></div>
     <div class="board-wrap" id="ed-wrap"><div class="board" id="ed-board"></div></div>
+  </div>
+</section>
+
+<!-- INVENTORES: pantalla dividida, cada chico inventa un nivel -->
+<section id="scr-duo" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="duo-back" title="Mapa">🗺️</button>
+    <div class="chip"><span class="num">🎨</span>¡Inventores!</div>
+  </header>
+  <div class="duo-grid">
+    <div class="duo-half" id="duo-A" data-p="A"></div>
+    <div class="duo-half" id="duo-B" data-p="B"></div>
   </div>
 </section>
 
@@ -171,7 +184,7 @@
 
 <canvas id="confetti"></canvas>
 
-<script src="js/levels.js?v=4"></script>
-<script src="js/game.js?v=4"></script>
+<script src="js/levels.js?v=5"></script>
+<script src="js/game.js?v=5"></script>
 </body>
 </html>

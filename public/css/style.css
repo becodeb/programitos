@@ -330,3 +330,22 @@ body.w3 .tile.water{background:radial-gradient(circle,#000 30%,#2a1f63 75%,var(-
 
 .robot.jump .sprite{animation:jumpup var(--step,.45s) ease-out}
 @keyframes jumpup{50%{transform:translateY(-55%) scale(1.15)}}
+
+/* ---------- Inventores (pantalla dividida) ---------- */
+.duo-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 12px 12px;min-height:0}
+.duo-half{background:#fff;border-radius:26px;border:6px solid var(--pc);box-shadow:0 6px 0 rgba(0,0,0,.12);display:flex;flex-direction:column;gap:8px;padding:8px;min-height:0;min-width:0}
+.duo-half.h-A,#duo-A{--pc:var(--a);--pd:var(--a-dark);--pl:var(--a-light)}
+.duo-half.h-B,#duo-B{--pc:var(--b);--pd:var(--b-dark);--pl:var(--b-light)}
+.duo-half.ready{background:#e9ffe9}
+.duo-half.ready .duo-tools,.duo-half.ready .board-wrap{opacity:.55}
+.duo-head{display:flex;align-items:center;gap:10px;background:var(--pl);border-radius:18px;padding:4px 10px;flex:0 0 auto}
+.duo-head .avatar{width:56px;height:56px;flex:0 0 auto}
+.duo-ready{margin-left:auto;position:relative;width:132px;height:62px;border-radius:20px;background:var(--pc);color:#fff;font-size:36px;box-shadow:0 6px 0 var(--pd)}
+.duo-half.ready .duo-ready{background:var(--green);box-shadow:0 6px 0 #1a8f58}
+.duo-ready:active{transform:translateY(4px);box-shadow:0 2px 0 var(--pd)}
+.duo-tools{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;flex:0 0 auto}
+.duo-tools .ed-tool{height:62px;font-size:32px;min-width:0}
+.duo-tools .ed-tool svg{width:42px;height:42px}
+.duo-board .tile{cursor:pointer}
+.duo-board .tile svg{width:84%;height:84%;pointer-events:none}
+@media (max-width:980px){.duo-tools .ed-tool{height:52px;font-size:26px}.duo-tools .ed-tool svg{width:32px;height:32px}.duo-ready{width:96px;height:52px}}
