@@ -361,3 +361,14 @@ body.w3 .tile.water{background:radial-gradient(circle,#000 30%,#2a1f63 75%,var(-
 .rep-prev .mini svg{width:15px;height:15px}
 .rep-prev .sep{width:3px;height:13px;margin:0 3px;border-radius:2px;background:rgba(255,255,255,.55)}
 .rep-close{height:34px;padding:0 14px;margin:2px 0;border:none;border-radius:10px;background:var(--yellow);font-size:20px;font-weight:700;cursor:pointer}
+
+/* Scroll del programa con el dedo: los bloques puestos dejan deslizar vertical; la paleta sigue arrastrando */
+.prog .blk,.rep-head{touch-action:pan-y}
+.prog{overscroll-behavior:contain}
+/* Repetir compacto: sin hueco vacío, vista previa en una sola línea */
+.prog .rep-body .slot{height:30px;margin:3px 0}
+.rep-foot{padding:2px 8px 4px}
+.rep-prev{flex-wrap:nowrap;overflow:hidden;max-width:100%}
+.rep-prev .mini{width:14px;height:14px;font-size:10px}
+.rep-prev .mini svg{width:12px;height:12px}
+.rep-close{height:26px;font-size:16px;padding:0 12px}

@@ -367,7 +367,7 @@ function renderProg(p) {
     if (it.t === 'm') h += `<button class="blk d-${it.d}${ro}" data-i="${i}">${blkInner(it.d)}</button>`;
     else h += `<div class="rep${it.open ? ' open' : ''}" data-ri="${i}"><div class="rep-head"><span class="rep-ico">🔁</span><button class="rep-m" data-rm="${i}">−</button><button class="rep-n" data-n="${i}">${it.n}</button><button class="rep-p" data-rp="${i}">+</button></div><div class="rep-body">` +
       it.body.map((d, j) => `<button class="blk d-${d}${ro}" data-i="${i}" data-j="${j}">${blkInner(d)}</button>`).join('') +
-      (it.open || !it.body.length ? '<span class="slot sm">+</span>' : '') + '</div><div class="rep-foot">' + (it.open && it.body.length ? `<button class="rep-close" data-rclose="${i}">✔</button>` : repPreview(it)) + '</div></div>';
+      (!it.body.length ? '<span class="slot sm">+</span>' : '') + '</div><div class="rep-foot">' + (it.open && it.body.length ? `<button class="rep-close" data-rclose="${i}">✔</button>` : repPreview(it)) + '</div></div>';
   });
   const last0 = prog[prog.length - 1];
   if (!isPredict() && n < max && !(last0 && last0.t === 'rep' && last0.open)) h += '<span class="slot"></span>';
@@ -428,6 +428,9 @@ document.addEventListener('pointermove', e => {
   if (!d.on) return;
   d.ghost.style.transform = `translate(${e.clientX - 34}px,${e.clientY - 28}px) scale(1.1)`;
   updateTarget(d, e);
+  // Autoscroll: si el dedo/mouse llega al borde del programa, se desplaza solo
+  const pr = $('#prog-' + d.p);
+  if (pr) { const r = pr.getBoundingClientRect(); if (e.clientX > r.left && e.clientX < r.right) { if (e.clientY < r.top + 40) pr.scrollTop -= 14; else if (e.clientY > r.bottom - 40) pr.scrollTop += 14; } }
 });
 document.addEventListener('pointerup', e => endDrag(e, false));
 document.addEventListener('pointercancel', e => endDrag(e, true));
