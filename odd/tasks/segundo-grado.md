@@ -17,7 +17,8 @@ what 1st grade already knows (48 levels, blocks, saved progress).
   so everything must be understandable from pictures.
 - UI copy and code comments: Spanish, matching the existing project (voseo). Commits: English conventional commits,
   no AI attribution.
-- 1st-grade progress (`programitos-v2` in localStorage) must survive untouched. 2nd grade uses `programitos-v2-g2`.
+- Per-grade saves: `programitos-v2` (1st) and `programitos-v2-g2` (2nd). Superseded 2026-11-25: progress no longer survives
+  forever; it lasts one class (see "One class, one progress"). Switching grades must not mix or lose a live session.
 - Nobody loses: no eliminations, no ranking between pairs.
 - Push and deploy are NOT authorized yet (classes use the live site).
 - RDD is off (global, user decision). TDD: not configured; ordinary functional checks.
@@ -33,7 +34,7 @@ level of both grades with a stored solution and asserts the win, max blocks, and
 
 ### Grades (T1)
 Start screen gets two small pills `1°` / `2°` (remembered in localStorage; `?grado=1|2` forces and remembers).
-1°: exactly today's flow. 2°: after joining goes straight to the map. Worlds, levels, stickers, themes, tutorials
+Both grades go straight to the map after joining (user request; Inventores stays as the 🎨 map button). Worlds, levels, stickers, themes, tutorials
 and saves are per grade. 1st-grade levels keep their order and indexes.
 
 ### New blocks, 2nd grade only (T2)
@@ -85,6 +86,18 @@ Today a drag moves one block of a full-width list and a line marks the target. M
 - 👕 Ropero (split screen, each kid dresses their own character): ~20 emoji items, slots head/face/hand/trail, prices 3–15,
   shown everywhere the character is drawn; trail draws while walking.
 
+### One class, one progress (T6, user request 2026-11-25)
+Computers move from one class to the next (classes last ~50 min), so a new pair must not find old progress.
+- Session clock shared by both grades, stored in localStorage, starts when a pair joins. Reloading keeps the progress.
+- 45 minutes after the start the progress is expired. Expired progress is wiped on page load, on entering the start
+  screen, and when the page is idle 3 minutes or comes back from hidden/sleep (then it returns to the start screen).
+  A pair that is actively playing at minute 46 is never interrupted in the middle of a level.
+- A save without a clock (from before this version) counts as expired.
+- Reset button 🔄 on the start screen (only when there is progress) and on the map, with a picture confirm card (✅ / ❌)
+  so it is not pressed by accident. Works without the teacher lock.
+- Wiping clears both grades: stars, unlocked levels, gems, album, coins, wardrobe, invented levels. Keeps sound, voice, grade.
+- The clock must be testable (time source injectable or overridable from the browser script).
+
 ### Less friction (T6)
 - Countdown 3-2-1 only on the first run of a level; retries show a short "¡YA!".
 - Hint 💡 in "need all stars" levels must go through the stars (today it ignores them).
@@ -99,7 +112,7 @@ Today a drag moves one block of a full-width list and a line marks the target. M
 - [ ] T3b Scratch-like drag workspace, added on user request (delegated, after T3)
 - [ ] T4 Race mode (delegated)
 - [ ] T5 Coins and wardrobe (delegated)
-- [ ] T6 Friction fixes, teacher panel, README, cache bump (delegated)
+- [ ] T6 Class-long progress with reset, map first, friction fixes, teacher panel, README, cache bump (delegated)
 - [ ] T7 Parent verification in a real browser, both grades, screenshots
 
 ## Checks
