@@ -22,6 +22,7 @@
 <!-- INICIO: cada chico toca su personaje -->
 <section id="scr-start" class="screen active">
   <h1 class="logo"><span>P</span><span>r</span><span>o</span><span>g</span><span>r</span><span>a</span><span>m</span><span>i</span><span>t</span><span>o</span><span>s</span></h1>
+  <div class="grades" id="grades"><button class="grade" data-grade="1">1°</button><button class="grade" data-grade="2">2°</button></div>
   <div class="start-btns">
     <button class="join join-A" data-join="A"><span class="ok">✅</span><span class="key">E</span></button>
     <div class="plus">+</div>
@@ -107,6 +108,7 @@
 <div class="overlay" id="ov-win">
   <div class="card">
     <div class="win-stars" id="win-stars"></div>
+    <div class="win-gem" id="win-gem" hidden></div>
     <div class="win-duo"><div class="ch" id="win-A"></div><div class="sticker" id="win-sticker"></div><div class="ch" id="win-B"></div></div>
     <div class="hf-btns">
       <button class="hf hf-A" data-hf="A"><span class="hand">✋</span><span class="key">E</span></button>
@@ -184,7 +186,9 @@
 
 <canvas id="confetti"></canvas>
 
+<script src="js/engine.js?v=11"></script>
 <script src="js/levels.js?v=11"></script>
+<script src="js/levels2.js?v=11"></script>
 <script src="js/game.js?v=11"></script>
 </body>
 </html>

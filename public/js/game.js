@@ -5,18 +5,19 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const LEVELS = window.LEVELS, WORLDS = window.WORLDS, PER_WORLD = 6;
-const DIRS = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
+const PER_WORLD = 6;
+const DIRS = Engine.DIRS;
+const ATOMS = ['j', 'c', 'g'];       // bloques sueltos que también van adentro de un repetir
 const ROT = { r: 0, d: 90, l: 180, u: 270 };
 const TURN = ['r', 'd', 'l', 'u'];
 const REP_BODY_MAX = 3;
-const STICKERS = ['🦄', '🐸', '🦖', '🐙', '🦁', '🐼', '🐢', '🦀', '🐬', '🌴', '🍉', '🐳',
+const STICKERS1 = ['🦄', '🐸', '🦖', '🐙', '🦁', '🐼', '🐢', '🦀', '🐬', '🌴', '🍉', '🐳',
   '🐧', '⛄', '🦊', '🦉', '🦌', '🎿', '🚀', '👽', '🪐', '🛸', '🌟', '👑',
   '🦘', '🐊', '🦋', '🌺', '🐠', '🏅',
   '🦆', '🪷', '🐞', '🌈', '🦦', '🏆',
   '🍄', '🦔', '🐿️', '🌰', '🦡', '🌲', '🏔️', '🦅', '🐐', '🧗', '🌄', '🎖️'];
 const FRUITS = { A: ['🍎', '🍌', '🍇'], B: ['🍓', '🍊', '🍉'] };
-const THEMES = [
+const THEMES1 = [
   { trees: ['🌳', '🌲', '🌳', '🌳', '🌲'], deco: ['🌷', '🌼', '🌸', '🍄', '🌻'] },
   { trees: ['🌴', '🌴', '🌵', '🌴', '🪨'], deco: ['🐚', '🦀', '🐚', '⛱️', '🐚'] },
   { trees: ['🌲', '🎄', '🌲', '⛄', '🌲'], deco: ['❄️', '🐧', '❄️', '⛄', '❄️'] },
@@ -27,7 +28,29 @@ const THEMES = [
   { trees: ['🪨', '⛰️', '🌲', '🪨', '🏔️'], deco: ['🌼', '🐐', '🪨', '🦅', '🌼'] }
 ];
 // Manito guía: qué señalar en cada nivel que presenta algo nuevo
-const TUTO = { 0: ['r', 'ready'], 4: ['pick', 'ready'], 18: ['rep', 'r', 'repn', 'ready'], 24: ['j', 'ready'] };
+const TUTO1 = { 0: ['r', 'ready'], 4: ['pick', 'ready'], 18: ['rep', 'r', 'repn', 'ready'], 24: ['j', 'ready'] };
+
+/* ---------- Grados: cada uno con sus niveles, mundos, figuritas, temas, manito y guardado ---------- */
+// free: desde qué mundo se abren solos (1.º: el arroyo en adelante; 2.º: se abre en orden, nunca solo)
+const GRADES = {
+  1: { levels: window.LEVELS, worlds: window.WORLDS, stickers: STICKERS1, themes: THEMES1, tuto: TUTO1, key: 'programitos-v2', free: 4 },
+  2: { levels: window.LEVELS2, worlds: window.WORLDS2, stickers: window.STICKERS2, themes: window.THEMES2, tuto: window.TUTO2, key: 'programitos-v2-g2', free: 99 }
+};
+const GRADE_KEY = 'programitos-grade';
+let GRADE = 1, LEVELS, WORLDS, STICKERS, THEMES, TUTO, SAVE_KEY, FREE_FROM;
+function readGrade() {
+  try {
+    const q = new URLSearchParams(location.search).get('grado');
+    if (q === '1' || q === '2') { localStorage.setItem(GRADE_KEY, q); return +q; }
+    const g = localStorage.getItem(GRADE_KEY); if (g === '1' || g === '2') return +g;
+  } catch (e) {}
+  return 1;
+}
+function applyGrade(n) {
+  const g = GRADES[GRADE = n];
+  ({ levels: LEVELS, worlds: WORLDS, stickers: STICKERS, themes: THEMES, tuto: TUTO, key: SAVE_KEY, free: FREE_FROM } = g);
+  document.body.classList.toggle('g2', n === 2);
+}
 
 /* ---------- Dibujos (SVG estáticos, sin animaciones internas) ---------- */
 function titoSVG() {
@@ -77,7 +100,8 @@ function gateSVG() {
   <rect x="4" y="30" width="92" height="12" rx="4"/><rect x="4" y="64" width="92" height="12" rx="4"/></g>
   <circle cx="50" cy="52" r="14" fill="#ffd23f" stroke="#c99a00" stroke-width="3"/><rect x="45" y="50" width="10" height="9" rx="2" fill="#7a4518"/><path d="M46 50 v-4 a4 4 0 0 1 8 0 v4" stroke="#7a4518" stroke-width="2.5" fill="none"/></svg>`;
 }
-function blkInner(d) { return d === 'j' ? '<span class="jico">🧺</span>' : arrowSVG(d); }
+const ICO = { j: '🧺', c: '<span class="cico"><b>👀⭐</b><b>🧺</b></span>', g: '<span class="cico"><b>👀👻</b><b>🔦</b></span>' };
+function blkInner(d) { return ICO[d] ? (d === 'j' ? `<span class="jico">${ICO[d]}</span>` : ICO[d]) : arrowSVG(d); }
 function arrowSVG(dir) {
   return `<svg viewBox="0 0 40 40" style="transform:rotate(${ROT[dir]}deg)"><path d="M5 15h17V7l14 13-14 13v-8H5z" fill="#fff" stroke="rgba(0,0,0,.25)" stroke-width="2" stroke-linejoin="round"/></svg>`;
 }
@@ -88,10 +112,9 @@ const P = {
 };
 
 /* ---------- Guardado ---------- */
-const SAVE_KEY = 'programitos-v2';
 function load() {
-  try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); if (d && d.stars) return d; } catch (e) {}
-  return { unlocked: 0, stars: {}, sound: true, voice: true, custom: null };
+  try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); if (d && d.stars) { if (GRADE === 2 && !d.gems) d.gems = {}; return d; } } catch (e) {}
+  return { unlocked: 0, stars: {}, gems: {}, sound: true, voice: true, custom: null };
 }
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S.save)); } catch (e) {} }
 
@@ -170,6 +193,7 @@ const Voice = {
 if (window.speechSynthesis) { Voice.pick(); speechSynthesis.onvoiceschanged = () => Voice.pick(); }
 
 /* ---------- Estado ---------- */
+applyGrade(readGrade());
 const S = {
   save: load(), idx: 0, L: null, custom: false, grid: null, cols: 0, rows: 0,
   prog: { A: [], B: [] }, ready: { A: false, B: false }, pick: { A: null, B: null }, running: false,
@@ -181,20 +205,11 @@ const isPredict = () => S.L.mode === 'predict';
 const countOf = p => S.prog[p].reduce((s, it) => s + (it.t === 'rep' ? 1 + it.body.length : 1), 0);
 const stepMs = () => S.fast ? 300 : 520;
 const worldOf = i => Math.floor(i / PER_WORLD);
-// Los mundos desde FREE_FROM (el arroyo) están abiertos desde el principio: avanzan solos con las estrellas
-const FREE_FROM = 4;
+// Los mundos desde FREE_FROM (1.º: el arroyo) están abiertos desde el principio: avanzan solos con las estrellas
 const lvOpen = i => i <= S.save.unlocked || (worldOf(i) >= FREE_FROM && (i % PER_WORLD === 0 || !!S.save.stars[i - 1]));
 const workshopOpen = () => S.save.unlocked >= 2 * PER_WORLD;
 
-function parseProg(s) {
-  const out = []; let i = 0;
-  while (s && i < s.length) {
-    const c = s[i];
-    if (/\d/.test(c)) { const j = s.indexOf(')', i); out.push({ t: 'rep', n: +c, body: s.slice(i + 2, j).split(''), open: false }); i = j + 1; }
-    else { out.push({ t: 'm', d: c }); i++; }
-  }
-  return out;
-}
+const parseProg = Engine.parse;
 
 /* ---------- Pantallas ---------- */
 function show(id) { $$('.screen').forEach(s => s.classList.toggle('active', s.id === id)); }
@@ -203,13 +218,25 @@ function overlay(id) {
   S.overlay = id || null;
   if (id) $('#' + id).classList.add('show');
 }
-function setWorld(w) { document.body.className = 'w' + w; }
+function setWorld(w) { document.body.className = (GRADE === 2 ? 'g2 x' : 'w') + w; }
 
 /* ---------- Inicio: los dos tocan su personaje ---------- */
 function initStart() {
   $('.join-A').insertAdjacentHTML('afterbegin', titoSVG());
   $('.join-B').insertAdjacentHTML('afterbegin', lulaSVG());
   $$('[data-join]').forEach(b => b.onclick = () => join(b.dataset.join));
+  $$('[data-grade]').forEach(b => b.onclick = () => { Snd.play('click'); switchGrade(+b.dataset.grade); });
+  markGrade();
+}
+function markGrade() { $$('[data-grade]').forEach(b => b.classList.toggle('on', +b.dataset.grade === GRADE)); }
+// Cambiar de grado: otros niveles y otro guardado. El guardado del grado anterior no se toca.
+function switchGrade(n) {
+  if (n === GRADE) return;
+  try { localStorage.setItem(GRADE_KEY, String(n)); } catch (e) {}
+  const { sound, voice } = S.save;
+  applyGrade(n); S.save = load(); S.save.sound = sound; S.save.voice = voice;   // sonido y voz se mantienen
+  S.L = null; S.duo = null;
+  markGrade(); syncToggles();
 }
 function join(p) {
   if (S.joined.A && S.joined.B) return;
@@ -219,7 +246,7 @@ function join(p) {
   if (S.joined.A && S.joined.B) {
     Snd.play('clap'); confetti(60);
     Voice.say('¡Hola Tito y Lula! ¡A programar juntos!');
-    setTimeout(() => { S.joined = { A: false, B: false }; $$('.join').forEach(b => b.classList.remove('on')); openDuo(); }, 900);
+    setTimeout(() => { S.joined = { A: false, B: false }; $$('.join').forEach(b => b.classList.remove('on')); GRADE === 2 ? openMap() : openDuo(); }, 900);
   } else if (S.joined[p]) Voice.say(p === 'A' ? '¡Hola Tito! ¿Y Lula?' : '¡Hola Lula! ¿Y Tito?');
 }
 
@@ -238,8 +265,9 @@ function openMap() {
       b.className = 'lv' + (st ? ' done' : '') + (!locked && !st && (w >= FREE_FROM ? true : i === S.save.unlocked) ? ' current' : '');
       b.disabled = locked;
       const tag = L.mode === 'predict' ? '🤔' : L.pre ? '🐛' : '';
+      const gem = L.par ? `<span class="gem-m${S.save.gems && S.save.gems[i] ? '' : ' no'}">💎</span>` : '';
       b.innerHTML = locked ? '<span class="lock">🔒</span>' :
-        `<span class="n">${i + 1}</span><span class="st">${'⭐'.repeat(st)}<i>${'⭐'.repeat(3 - st)}</i></span>${tag ? `<span class="tag">${tag}</span>` : ''}`;
+        `<span class="n">${i + 1}</span><span class="st">${'⭐'.repeat(st)}<i>${'⭐'.repeat(3 - st)}</i>${gem}</span>${tag ? `<span class="tag">${tag}</span>` : ''}`;
       b.onclick = () => { Snd.play('click'); startLevel(i); };
       row.querySelector('.w-levels').appendChild(b);
     }
@@ -251,8 +279,8 @@ function openMap() {
 /* ---------- Paneles ---------- */
 function buildPanel(p) {
   const el = $('#panel-' + p), isA = p === 'A';
-  const k = isA ? { u: 'W', l: 'A', d: 'S', r: 'D', j: 'F', rep: 'R', back: 'Q', ready: 'E' }
-                : { u: '↑', l: '←', d: '↓', r: '→', j: 'Ctrl', rep: 'Shift', back: '⌫', ready: 'Enter' };
+  const k = isA ? { u: 'W', l: 'A', d: 'S', r: 'D', j: 'F', rep: 'R', h: 'T', c: 'G', g: 'V', back: 'Q', ready: 'E' }
+                : { u: '↑', l: '←', d: '↓', r: '→', j: 'Ctrl', rep: 'Shift', h: 'P', c: 'L', g: 'K', back: '⌫', ready: 'Enter' };
   el.innerHTML = `
     <div class="p-head"><div class="avatar">${P[p].svg()}</div><div class="order" id="order-${p}"></div></div>
     <div class="prog" id="prog-${p}"></div>
@@ -263,6 +291,9 @@ function buildPanel(p) {
       <button class="pal down d-d" data-act="d">${arrowSVG('d')}<span class="key">${k.d}</span></button>
       <button class="pal right d-r" data-act="r">${arrowSVG('r')}<span class="key">${k.r}</span></button>
       <button class="pal rp" data-act="rep"><span class="rp-txt">🔁</span><span class="key">${k.rep}</span></button>
+      <button class="pal hp" data-act="h" title="Repetir hasta la casita"><span class="rp-txt">🔁🏠</span><span class="key">${k.h}</span></button>
+      <button class="pal cp" data-act="c" title="Si hay estrella, recoger">${ICO.c}<span class="key">${k.c}</span></button>
+      <button class="pal gp" data-act="g" title="Si hay fantasma, alumbrar">${ICO.g}<span class="key">${k.g}</span></button>
     </div>
     <div class="predict">${FRUITS[p].map((f, i) => `<button class="pick-btn" data-pick="${i}">${f}</button>`).join('')}</div>
     <div class="p-actions">
@@ -290,16 +321,25 @@ function act(p, a) {
   const prog = S.prog[p], last = prog[prog.length - 1];
   const openRep = last && last.t === 'rep' && last.open ? last : null;
   unready(p);
-  if (DIRS[a] || a === 'j') {
+  if (DIRS[a] || ATOMS.includes(a)) {
     if (!S.L.tools.includes(a)) return;
     if (countOf(p) >= S.L.max) return full(p);
     if (openRep) { openRep.body.push(a); S.flash = { p, i: prog.length - 1, j: openRep.body.length - 1 }; if (openRep.body.length >= REP_BODY_MAX) openRep.open = false; }
     else { prog.push({ t: 'm', d: a }); S.flash = { p, i: prog.length - 1 }; }
     Snd.play('add', a); pressFx(p, a);
-  } else if (a === 'rep') {
-    if (!S.L.tools.includes('rep')) return;
+  } else if (a === 'rep' || a === 'h') {
+    if (!S.L.tools.includes(a)) return;
     if (openRep) { openRep.open = false; Snd.play('ready'); }
-    else { if (countOf(p) >= S.L.max) return full(p); prog.push({ t: 'rep', n: 2, body: [], open: true }); S.flash = { p, i: prog.length - 1 }; Snd.play('rep'); Voice.say('Poné adentro lo que se repite.'); }
+    else {
+      if (countOf(p) >= S.L.max) return full(p);
+      prog.push(a === 'h' ? { t: 'rep', u: true, n: 2, body: [], open: true } : { t: 'rep', n: 2, body: [], open: true });
+      S.flash = { p, i: prog.length - 1 }; Snd.play('rep');
+      Voice.say(a === 'h' ? 'Poné adentro lo que se repite hasta llegar a la casita.' : 'Poné adentro lo que se repite.');
+    }
+  } else if (a === 'rep-' || a === 'rep+') {                  // teclado: menos / más veces en el último repetir
+    let i = prog.length - 1; while (i >= 0 && !(prog[i].t === 'rep' && !prog[i].u)) i--;
+    if (i >= 0) stepRep(p, i, a === 'rep+' ? 1 : -1);
+    return;
   } else if (a === 'back') {
     if (!last) return;
     if (last.t === 'rep' && last.body.length) { last.body.pop(); last.open = true; }
@@ -327,7 +367,7 @@ function cycleRep(p, i) {
 }
 // Botones − / + del repetir: cambian cuántas veces repite (de 2 a 9) y lo dicen en voz alta
 function stepRep(p, i, k) {
-  const it = S.prog[p][i]; if (!it) return;
+  const it = S.prog[p][i]; if (!it || it.u) return;
   const n = Math.max(2, Math.min(9, it.n + k));
   if (n === it.n) return Snd.play('full');
   it.n = n; unready(p); Snd.play('add', k > 0 ? 'u' : 'd'); tutoDone(p, 'repn'); Voice.say(n + ' veces'); renderProg(p);
@@ -338,16 +378,19 @@ function closeRep(p, i) {
   it.open = false; unready(p); Snd.play('ready'); renderProg(p);
 }
 // Vista previa: lo de adentro, repetido n veces, en chiquito
+const MINI = { j: '🧺', c: '👀', g: '🔦' };
 function repPreview(it) {
   if (!it.body.length) return '';
-  const one = it.body.map(d => `<span class="mini">${d === 'j' ? '🧺' : arrowSVG(d)}</span>`).join('');
+  const one = it.body.map(d => `<span class="mini">${MINI[d] || arrowSVG(d)}</span>`).join('');
+  // El "hasta la casita" muestra su cuerpo una vez y puntitos hacia la casa
+  if (it.u) return `<span class="rep-prev">${one}<span class="more">…🏠</span></span>`;
   return '<span class="rep-prev">' + Array.from({ length: it.n }, () => one).join('<span class="sep"></span>') + '</span>';
 }
 // Tocar una flecha del programa la gira (sirve para arreglar "bichitos")
 function rotateAt(p, i, j) {
   const it = S.prog[p][i]; if (!it) return;
   const dirs = TURN.filter(d => S.L.tools.includes(d)); if (dirs.length < 2) return;
-  const next = d => d === 'j' ? d : dirs[(dirs.indexOf(d) + 1) % dirs.length];
+  const next = d => !TURN.includes(d) ? d : dirs[(dirs.indexOf(d) + 1) % dirs.length];
   if (j !== undefined) it.body[j] = next(it.body[j]); else if (it.t === 'm') it.d = next(it.d); else return;
   unready(p); Snd.play('add', j !== undefined ? it.body[j] : it.d); tutoDone(p, 'blk'); renderProg(p);
 }
@@ -362,10 +405,12 @@ function renderProg(p) {
   const prog = S.prog[p], max = S.L.max, n = countOf(p), ro = isPredict() ? ' ro' : '';
   // Estilo code.org: bloque de inicio arriba y bloques encastrados en columna
   const dots = isPredict() ? '' : `<span class="dots">${'●'.repeat(Math.min(n, 14))}<i>${'●'.repeat(Math.max(0, Math.min(max, 14) - n))}</i></span>`;
-  let h = `<div class="hat"><span class="hat-go">▶</span>${dots}</div>`;
+  const gem = !isPredict() && S.L.par ? `<span class="gem" title="Con ${S.L.par[p]} bloques o menos, ¡hay 💎!">💎 ${S.L.par[p]}</span>` : '';
+  let h = `<div class="hat"><span class="hat-go">▶</span>${dots}${gem}</div>`;
   prog.forEach((it, i) => {
     if (it.t === 'm') h += `<button class="blk d-${it.d}${ro}" data-i="${i}">${blkInner(it.d)}</button>`;
-    else h += `<div class="rep${it.open ? ' open' : ''}" data-ri="${i}"><div class="rep-head"><span class="rep-ico">🔁</span><button class="rep-m" data-rm="${i}">−</button><button class="rep-n" data-n="${i}">${it.n}</button><button class="rep-p" data-rp="${i}">+</button></div><div class="rep-body">` +
+    else h += `<div class="rep${it.open ? ' open' : ''}${it.u ? ' until' : ''}" data-ri="${i}"><div class="rep-head"><span class="rep-ico">🔁</span>` +
+      (it.u ? '<span class="rep-home">🏠</span>' : `<button class="rep-m" data-rm="${i}" title="Z ,">−</button><button class="rep-n" data-n="${i}">${it.n}</button><button class="rep-p" data-rp="${i}" title="X .">+</button>`) + '</div><div class="rep-body">' +
       it.body.map((d, j) => `<button class="blk d-${d}${ro}" data-i="${i}" data-j="${j}">${blkInner(d)}</button>`).join('') +
       (!it.body.length ? '<span class="slot sm">+</span>' : '') + '</div><div class="rep-foot">' + (it.open && it.body.length ? `<button class="rep-close" data-rclose="${i}">✔</button>` : repPreview(it)) + '</div></div>';
   });
@@ -378,16 +423,19 @@ function renderProg(p) {
     if (el) el.classList.add('dropped');
   }
   const last = prog[prog.length - 1], open = last && last.t === 'rep' && last.open;
-  const rp = $(`#panel-${p} .pal.rp`);
-  rp.classList.toggle('closing', !!open);
-  rp.querySelector('.rp-txt').textContent = open ? '✔️' : '🔁';
+  [['.pal.rp', '🔁'], ['.pal.hp', '🔁🏠']].forEach(([sel, ico]) => {
+    const b = $(`#panel-${p} ${sel}`);
+    b.classList.toggle('closing', !!open);
+    b.querySelector('.rp-txt').textContent = open ? '✔️' : ico;
+  });
   $(`#panel-${p} .ready`).disabled = isPredict() ? S.pick[p] === null : n === 0;
   placeTuto(p);
 }
 function setTools() {
   for (const p of ['A', 'B']) {
-    ['u', 'd', 'l', 'r', 'j'].forEach(d => $(`#panel-${p} [data-act="${d}"]`).classList.toggle('hide', !S.L.tools.includes(d)));
+    ['u', 'd', 'l', 'r', 'j', 'c', 'g'].forEach(d => $(`#panel-${p} [data-act="${d}"]`).classList.toggle('hide', !S.L.tools.includes(d)));
     $(`#panel-${p} .pal.rp`).style.display = S.L.tools.includes('rep') ? '' : 'none';
+    $(`#panel-${p} .pal.hp`).style.display = S.L.tools.includes('h') ? '' : 'none';
     $('#panel-' + p).classList.toggle('mode-predict', isPredict());
     $$(`#panel-${p} .pick-btn`).forEach(b => b.classList.remove('on'));
     const first = (S.L.first || 'A') === p, coop = S.L.map.some(r => r.includes('o'));
@@ -400,7 +448,7 @@ const DRAG = new Map();            // pointerId -> estado del arrastre
 let suppressClick = false;
 function dragSource(t, p) {
   const pal = t.closest('.pal');
-  if (pal && ['u', 'd', 'l', 'r', 'j', 'rep'].includes(pal.dataset.act)) return { kind: 'pal', act: pal.dataset.act, el: pal };
+  if (pal && ['u', 'd', 'l', 'r', 'j', 'c', 'g', 'rep', 'h'].includes(pal.dataset.act)) return { kind: 'pal', act: pal.dataset.act, el: pal };
   const blk = t.closest(`#prog-${p} .blk`);
   if (blk && !blk.classList.contains('ro')) return { kind: 'blk', i: +blk.dataset.i, j: blk.dataset.j !== undefined ? +blk.dataset.j : undefined, el: blk };
   const head = t.closest(`#prog-${p} .rep-head`);
@@ -411,7 +459,7 @@ function dragWhat(d) {
   if (d.src.kind === 'pal') return d.src.act;
   const it = S.prog[d.p][d.src.i]; if (!it) return null;
   if (d.src.j !== undefined) return it.body[d.src.j];
-  return it.t === 'rep' ? 'rep' : it.d;
+  return it.t === 'rep' ? (it.u ? 'h' : 'rep') : it.d;
 }
 document.addEventListener('pointerdown', e => {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -440,8 +488,8 @@ function startDrag(d) {
   const what = dragWhat(d); if (!what) { DRAG.forEach((v, k) => v === d && DRAG.delete(k)); return; }
   d.on = true; d.what = what; suppressClick = true; unreadyOnDrag(d.p);
   const g = document.createElement('div');
-  g.className = 'ghost ' + (what === 'rep' ? 'g-rep' : 'd-' + what);
-  g.innerHTML = what === 'rep' ? '<span>🔁</span>' : blkInner(what);
+  g.className = 'ghost ' + (what === 'rep' || what === 'h' ? 'g-rep' : 'd-' + what);
+  g.innerHTML = what === 'rep' ? '<span>🔁</span>' : what === 'h' ? '<span>🔁🏠</span>' : blkInner(what);
   document.body.appendChild(g); d.ghost = g;
   const m = document.createElement('div'); m.className = 'ins-marker ' + d.p; m.style.display = 'none';
   document.body.appendChild(m); d.marker = m;
@@ -456,7 +504,7 @@ function calcTarget(d, e, pr) {
   const idx = c => +(c.dataset.i !== undefined ? c.dataset.i : c.dataset.ri);
   for (const c of kids) {
     const r = c.getBoundingClientRect();
-    if (c.classList.contains('rep') && d.what !== 'rep' && y >= r.top + 20 && y <= r.bottom) {
+    if (c.classList.contains('rep') && d.what !== 'rep' && d.what !== 'h' && y >= r.top + 20 && y <= r.bottom) {
       const ri = idx(c), body = c.querySelector('.rep-body'), bk = [...body.querySelectorAll('.blk')], br = body.getBoundingClientRect();
       let bi = bk.length;
       for (let k = 0; k < bk.length; k++) { const q = bk[k].getBoundingClientRect(); if (y < q.top + q.height / 2) { bi = k; break; } }
@@ -502,7 +550,7 @@ function applyDrop(d) {
   if (t.full) return full(p);
   if (src.kind === 'pal' && countOf(p) >= S.L.max) return full(p);
   let ri = t.ri, bi = t.bi, item;
-  if (src.kind === 'pal') item = src.act === 'rep' ? { rep: { t: 'rep', n: 2, body: [], open: false } } : { d: src.act };
+  if (src.kind === 'pal') item = src.act === 'rep' ? { rep: { t: 'rep', n: 2, body: [], open: false } } : src.act === 'h' ? { rep: { t: 'rep', u: true, n: 2, body: [], open: false } } : { d: src.act };
   else {
     const sameRepBody = src.j !== undefined && bi !== undefined && src.i === ri;
     item = takeItem(p, src);
@@ -515,7 +563,7 @@ function applyDrop(d) {
   } else {
     prog.splice(ri, 0, item.rep || { t: 'm', d: item.d }); S.flash = { p, i: ri };
   }
-  Snd.play('drop'); if (item.d) tutoDone(p, item.d); else tutoDone(p, 'rep');
+  Snd.play('drop'); if (item.d) tutoDone(p, item.d); else tutoDone(p, item.rep.u ? 'h' : 'rep');
   renderProg(p);
 }
 function takeItem(p, src) {
@@ -529,6 +577,7 @@ function takeItem(p, src) {
 function tutoTarget(p, step) {
   const panel = '#panel-' + p;
   return { r: `${panel} [data-act="r"]`, ready: `${panel} .ready`, pick: `${panel} .pick-btn`, rep: `${panel} .pal.rp`, j: `${panel} [data-act="j"]`,
+    h: `${panel} .pal.hp`, c: `${panel} .pal.cp`, g: `${panel} .pal.gp`,
     repn: `${panel} .rep-n`, blk: `${panel} .prog .blk` }[step];
 }
 function placeTuto(p) {
@@ -584,24 +633,22 @@ function startLevel(i, customL) {
 }
 function setBubble(t) { $('#bubble-text').textContent = t; }
 function parseLevel() {
-  const m = S.L.map; S.rows = m.length; S.cols = m[0].length;
-  S.grid = m.map(r => r.split(''));
-  S.stars = []; S.pads = []; S.gates = []; S.homes = {}; S.start = {};
-  S.grid.forEach((row, y) => row.forEach((c, x) => {
-    if (c === 'A' || c === 'B') S.start[c] = { x, y };
-    if (c === 'a' || c === 'b') S.homes[c.toUpperCase()] = { x, y };
-    if (c === '*') S.stars.push({ x, y });
-    if (c === 'o') S.pads.push({ x, y });
-    if (c === 'D') S.gates.push({ x, y });
-  }));
+  const m = Engine.parseMap(S.L.map);
+  S.map = m; S.rows = m.rows; S.cols = m.cols; S.grid = m.grid;
+  S.stars = m.stars.map(s => ({ ...s })); S.pads = m.pads.map(s => ({ ...s })); S.gates = m.gates.map(s => ({ ...s })); S.boxes = m.boxes.map(s => ({ ...s }));
+  S.start = m.start; S.homes = { ...m.homes };
+  // Casitas que se mueven: para la pista y para saber hacia dónde mira, vale la primera posible
+  for (const p of ['A', 'B']) if (S.L.houses && S.L.houses[p]) { const [x, y] = S.L.houses[p][0]; S.homes[p] = { x, y }; }
 }
-function cellAt(x, y) { return (y < 0 || y >= S.rows || x < 0 || x >= S.cols) ? null : S.grid[y][x]; }
-function blocked(x, y, gatesOpen) {
-  const c = cellAt(x, y);
-  return c === null || c === '#' || c === 'R' || c === '~' || (c === 'D' && !gatesOpen);
-}
+const cellAt = (x, y) => Engine.cellAt(S.map, x, y);
+const blocked = (x, y, gatesOpen) => Engine.blocked(S.map, x, y, gatesOpen);
 function hash(x, y) { return (x * 7 + y * 13 + S.idx * 3) % 5; }
 
+function ent(cls, x, y, inner) {
+  const e = document.createElement('div'); e.className = 'ent ' + cls;
+  e.style.setProperty('--x', x); e.style.setProperty('--y', y); e.innerHTML = inner; $('#board').appendChild(e); return e;
+}
+const key = (x, y) => x + ',' + y;
 function renderBoard() {
   const b = $('#board'), th = THEMES[S.custom ? 0 : worldOf(S.idx)];
   let html = '';
@@ -610,14 +657,18 @@ function renderBoard() {
     html += `<div class="tile ${c === '~' ? 'water' : 'g' + ((x + y) % 2)}" style="--x:${x};--y:${y}">${inner}</div>`;
   }));
   b.innerHTML = html;
-  const ent = (cls, x, y, inner) => {
-    const e = document.createElement('div'); e.className = 'ent ' + cls;
-    e.style.setProperty('--x', x); e.style.setProperty('--y', y); e.innerHTML = inner; b.appendChild(e); return e;
-  };
-  for (const p of ['A', 'B']) if (S.homes[p]) S.homes[p].el = ent('home', S.homes[p].x, S.homes[p].y, houseSVG(P[p].color, P[p].dark));
+  S.cands = {}; S.dyn = []; S.starEl = {};
+  for (const p of ['A', 'B']) {
+    if (!S.homes[p]) continue;
+    const cands = S.L.houses && S.L.houses[p];
+    // Casita que se mueve: se dibujan punteadas todas las posibles y la de verdad queda escondida hasta que arranca
+    if (cands) S.cands[p] = cands.map(([x, y]) => ent('home cand', x, y, houseSVG(P[p].color, P[p].dark)));
+    S.homes[p].el = ent('home' + (cands ? ' hide' : ''), S.homes[p].x, S.homes[p].y, houseSVG(P[p].color, P[p].dark));
+  }
   S.pads.forEach(pd => pd.el = ent('pad', pd.x, pd.y, padSVG()));
   S.gates.forEach(g => g.el = ent('gate', g.x, g.y, gateSVG()));
-  S.stars.forEach(s => s.el = ent('star', s.x, s.y, '⭐'));
+  S.boxes.forEach(bx => bx.el = ent('box', bx.x, bx.y, '<span class="bx">🎁</span>'));
+  S.stars.forEach(s => s.el = S.starEl[key(s.x, s.y)] = ent('star', s.x, s.y, '⭐'));
   S.fruits = [];
   if (isPredict()) for (const p of ['A', 'B']) S.L.opts[p].forEach(([x, y], i) => S.fruits.push({ p, i, x, y, el: ent('fruit f' + p, x, y, FRUITS[p][i]) }));
   for (const p of ['A', 'B']) {
@@ -642,7 +693,7 @@ function placeRobot(p, x, y) {
 }
 function initialLeft(p) {
   if (S.homes[p]) return S.homes[p].x < S.start[p].x;
-  const firstH = flatten(S.prog[p]).find(s => s.d === 'l' || s.d === 'r');
+  const firstH = Engine.flatten(S.prog[p]).find(s => s.d === 'l' || s.d === 'r');
   return firstH ? firstH.d === 'l' : S.start[p].x > S.cols / 2;
 }
 function resetRun() {
@@ -652,25 +703,27 @@ function resetRun() {
     r.face = initialLeft(p) ? 'l' : 'r';
     r.el.className = 'ent robot r-' + p + (r.face === 'l' ? ' left' : '');
     void r.el.offsetWidth; r.el.style.transition = '';
-    S.homes[p]?.el.classList.remove('glow');
+    const h = S.homes[p];
+    if (h && h.el) h.el.classList.remove('glow');
+    // Vuelven las casitas punteadas y la de verdad se esconde
+    if (S.cands && S.cands[p]) {
+      const [cx, cy] = S.L.houses[p][0]; h.x = cx; h.y = cy;
+      S.cands[p].forEach(c => c.classList.remove('hide')); h.el.classList.add('hide');
+      h.el.style.setProperty('--x', cx); h.el.style.setProperty('--y', cy);
+    }
   }
-  S.stars.forEach(s => { s.got = false; s.el.classList.remove('got'); });
+  // Cofres cerrados otra vez: lo que había adentro (estrella, fantasma, humito) desaparece
+  (S.dyn || []).forEach(e => e.remove()); S.dyn = [];
+  Object.keys(S.starEl || {}).forEach(k => { if (!S.stars.some(s => key(s.x, s.y) === k)) delete S.starEl[k]; });
+  S.boxes.forEach(bx => bx.el.classList.remove('open'));
+  S.stars.forEach(s => s.el.classList.remove('got'));
   S.pads.forEach(pd => pd.el.classList.remove('on'));
   S.gates.forEach(g => g.el.classList.remove('open'));
-  S.gatesOpen = false; S.got = 0;
   $$('#board .foot').forEach(f => f.remove());
   $$('.panel').forEach(p => p.classList.remove('active', 'locked'));
 }
 
-/* ---------- Ejecución ---------- */
-function flatten(prog) {
-  const out = [];
-  prog.forEach((it, i) => {
-    if (it.t === 'm') out.push({ d: it.d, i });
-    else for (let k = 0; k < it.n; k++) it.body.forEach((d, j) => out.push({ d, i, j, k, n: it.n }));
-  });
-  return out;
-}
+/* ---------- Ejecución: el motor (engine.js) suelta eventos y acá se animan ---------- */
 function markRun(p, st) {
   $$(`#prog-${p} .run`).forEach(e => e.classList.remove('run'));
   $$(`#prog-${p} .rep`).forEach(e => e.removeAttribute('data-iter'));
@@ -679,7 +732,7 @@ function markRun(p, st) {
   const el = $(sel); if (el) el.classList.add('run');
   if (st.j !== undefined) {
     const rep = $(`#prog-${p} [data-ri="${st.i}"]`);
-    if (rep) { rep.classList.add('run'); rep.dataset.iter = `${st.k + 1}/${st.n}`; }
+    if (rep) { rep.classList.add('run'); rep.dataset.iter = st.u ? `${st.k + 1}` : `${st.k + 1}/${st.n}`; }
   }
 }
 function fx(p, emoji) {
@@ -693,10 +746,12 @@ async function run() {
   $$('.tuto-hand').forEach(h => h.remove());
   resetRun();
   $$('.panel').forEach(p => p.classList.add('locked'));
+  // La variante la elige el motor: si algún programa falla en alguna, juega esa (así no se gana de casualidad)
+  S.W = Engine.world(S.L, Engine.pickVariant(S.L, S.prog, { pick: S.pick }));
   await countdown();
-  const order = (S.L.first || 'A') === 'A' ? ['A', 'B'] : ['B', 'A'];
+  await shuffleHouses();
   $('#board').style.setProperty('--step', (stepMs() * .85) / 1000 + 's');
-  for (const p of order) {
+  for (const p of Engine.order(S.L)) {
     $$('.panel').forEach(el => el.classList.toggle('active', el.dataset.p === p));
     setBubble(p === 'A' ? '🤖 👣' : '🐱 👣');
     const res = await runRobot(p);
@@ -704,7 +759,7 @@ async function run() {
     if (!res.ok) return fail(p, res.reason);
     await sleep(250);
   }
-  if (S.L.need && S.stars.length && S.got < S.stars.length) return fail('A', 'stars');
+  if (S.L.need && S.W.total && S.W.got < S.W.total) return fail('A', 'stars');
   win();
 }
 async function countdown() {
@@ -716,54 +771,75 @@ async function countdown() {
   }
   overlay(null);
 }
+// Las casitas punteadas "barajan": la de verdad salta entre los lugares posibles y se queda en uno (~1,2 s)
+async function shuffleHouses() {
+  const ps = ['A', 'B'].filter(p => S.cands && S.cands[p]); if (!ps.length) return;
+  const steps = 4, last = {};
+  ps.forEach(p => { S.cands[p].forEach(c => c.classList.add('hide')); S.homes[p].el.classList.remove('hide'); last[p] = -1; });
+  for (let n = 0; n < steps; n++) {
+    ps.forEach(p => {
+      const list = S.L.houses[p];
+      let t;
+      if (n === steps - 1) t = S.W.homes[p];
+      else { let i; do i = Math.floor(Math.random() * list.length); while (list.length > 1 && i === last[p]); last[p] = i; t = { x: list[i][0], y: list[i][1] }; }
+      S.homes[p].el.style.setProperty('--x', t.x); S.homes[p].el.style.setProperty('--y', t.y);
+    });
+    Snd.play('jump'); await sleep(300);
+  }
+  ps.forEach(p => { S.homes[p].x = S.W.homes[p].x; S.homes[p].y = S.W.homes[p].y; });
+}
+function openBox(ev) {
+  const bx = S.boxes.find(b => b.x === ev.x && b.y === ev.y); if (bx) bx.el.classList.add('open');
+  if (ev.what === 'star') { const el = ent('star', ev.x, ev.y, '⭐'); S.dyn.push(el); S.starEl[key(ev.x, ev.y)] = el; }
+  else if (ev.what === 'ghost') S.dyn.push(ent('spook', ev.x, ev.y, '<span class="gh">👻</span>'));
+  else S.dyn.push(ent('puff', ev.x, ev.y, '<span class="gh">💨</span>'));
+}
+const spookAt = (x, y) => S.dyn.find(e => e.classList.contains('spook') && +e.style.getPropertyValue('--x') === x && +e.style.getPropertyValue('--y') === y);
 async function runRobot(p) {
-  const r = S.pos[p], steps = flatten(S.prog[p]);
-  for (const st of steps) {
-    markRun(p, st);
-    // Recoger: no se mueve; junta la estrella si está parado encima
-    if (st.d === 'j') {
-      const st0 = S.stars.find(s => !s.got && s.x === r.x && s.y === r.y);
-      r.el.classList.remove('hop', 'jump', 'bump'); void r.el.offsetWidth; r.el.classList.add('hop');
-      if (!st0) { Snd.play('bump'); fx(p, '❓'); await sleep(600); r.el.classList.add('dizzy'); return { ok: false, reason: 'empty' }; }
-      st0.got = true; S.got++; st0.el.classList.add('got'); Snd.play('star'); fx(p, '⭐');
-      await sleep(stepMs()); continue;
-    }
-    const jump = false, dir = jump ? r.face : st.d, k = jump ? 2 : 1;
-    r.face = dir;
-    const [dx, dy] = DIRS[dir], nx = r.x + dx * k, ny = r.y + dy * k;
-    if (dx) r.el.classList.toggle('left', dx < 0);
-    if (blocked(nx, ny, S.gatesOpen)) {
-      r.el.classList.remove('hop', 'jump'); void r.el.offsetWidth; r.el.classList.add('bump');
-      Snd.play('bump'); fx(p, '💫');
-      await sleep(600); r.el.classList.add('dizzy');
-      const c = cellAt(nx, ny);
-      return { ok: false, reason: c === null ? 'edge' : c === '~' ? 'water' : c === 'D' ? 'gate' : 'bump' };
-    }
-    r.el.classList.remove('hop', 'jump'); void r.el.offsetWidth; r.el.classList.add(jump ? 'jump' : 'hop');
-    placeRobot(p, nx, ny); Snd.play(jump ? 'jump' : 'step', p);
-    await sleep(stepMs());
-    const star = S.stars.find(s => !s.got && s.x === nx && s.y === ny);
-    if (star && !S.L.tools.includes('j')) { star.got = true; S.got++; star.el.classList.add('got'); Snd.play('star'); }
-    const pad = S.pads.find(pd => pd.x === nx && pd.y === ny);
-    if (pad && !S.gatesOpen) {
-      pad.el.classList.add('on'); Snd.play('press'); S.gatesOpen = true;
-      await sleep(150); S.gates.forEach(g => g.el.classList.add('open')); Snd.play('gate'); fx(p, '✨');
-      await sleep(400);
+  const r = S.pos[p];
+  const tgt = isPredict() ? S.L.opts[p][S.pick[p]] : null;
+  const face = dir => { const dx = DIRS[dir][0]; if (dx) r.el.classList.toggle('left', dx < 0); };
+  const hop = cls => { r.el.classList.remove('hop', 'jump', 'bump'); void r.el.offsetWidth; r.el.classList.add(cls); };
+  for (const ev of Engine.run(S.W, p, S.prog[p], { target: tgt ? { x: tgt[0], y: tgt[1] } : null })) {
+    switch (ev.e) {
+      case 'op': markRun(p, ev); if (ev.d === 'j') hop('hop'); break;
+      case 'cond':                                  // 👀 el robot "mira" y dice si sí (✔) o no (✖)
+        if (ev.c === 'h') { $$(`#prog-${p} .run`).forEach(e => e.classList.remove('run')); const rp = $(`#prog-${p} [data-ri="${ev.i}"]`); if (rp) { rp.classList.add('run'); rp.dataset.iter = `${ev.k + 1}`; } }
+        fx(p, ev.yes ? '👀✔' : '👀✖'); Snd.play('tick'); await sleep(ev.c === 'h' ? 260 : (S.fast ? 260 : 380)); break;
+      case 'star':
+        S.starEl[key(ev.x, ev.y)]?.classList.add('got'); Snd.play('star');
+        if (!ev.auto) { fx(p, '⭐'); await sleep(stepMs()); }
+        break;
+      case 'light': { const sp = spookAt(ev.x, ev.y); if (sp) sp.classList.add('lit'); Snd.play('ready'); fx(p, '🔦'); await sleep(S.fast ? 260 : 400); break; }
+      case 'bump':
+        face(ev.dir); r.el.classList.remove('hop', 'jump'); void r.el.offsetWidth; r.el.classList.add('bump');
+        Snd.play('bump'); fx(p, '💫'); await sleep(600); r.el.classList.add('dizzy'); break;
+      case 'move':
+        face(ev.dir); hop('hop'); placeRobot(p, ev.x, ev.y); Snd.play('step', p); await sleep(stepMs()); break;
+      case 'box': openBox(ev); Snd.play(ev.what === 'star' ? 'ready' : ev.what === 'ghost' ? 'full' : 'click'); await sleep(S.fast ? 220 : 340); break;
+      case 'pad':
+        S.pads.forEach(pd => pd.el.classList.add('on')); Snd.play('press'); await sleep(150);
+        S.gates.forEach(g => g.el.classList.add('open')); Snd.play('gate'); fx(p, '✨'); await sleep(400); break;
+      case 'home':
+        r.el.classList.remove('hop', 'jump');
+        S.homes[p]?.el.classList.add('glow'); r.el.classList.add('dance'); Snd.play('home'); fx(p, '❤️');
+        return { ok: true };
+      case 'fail':
+        if (ev.reason === 'empty') { Snd.play('bump'); fx(p, '❓'); await sleep(600); r.el.classList.add('dizzy'); }
+        else if (ev.reason === 'loop') { fx(p, '🌀'); Snd.play('bump'); await sleep(600); r.el.classList.add('dizzy'); }
+        else if (ev.reason === 'ghost') { fx(p, '👻'); Snd.play('bump'); await sleep(600); r.el.classList.add('dizzy'); }
+        else if (ev.reason === 'nohome' || ev.reason === 'guess') { r.el.classList.remove('hop', 'jump'); r.el.classList.add('sad'); fx(p, '❓'); }
+        return { ok: false, reason: ev.reason };
     }
   }
-  r.el.classList.remove('hop', 'jump');
-  let target = S.homes[p];
-  if (isPredict()) { const [x, y] = S.L.opts[p][S.pick[p]]; target = { x, y }; }
-  if (r.x !== target.x || r.y !== target.y) { r.el.classList.add('sad'); fx(p, '❓'); return { ok: false, reason: isPredict() ? 'guess' : 'nohome' }; }
-  S.homes[p]?.el.classList.add('glow'); r.el.classList.add('dance'); Snd.play('home'); fx(p, '❤️');
-  return { ok: true };
+  return { ok: false, reason: 'nohome' };
 }
 
 /* ---------- Resultado ---------- */
 function fail(p, reason) {
   S.running = false; S.fails++;
   const n = P[p].name;
-  const why = { bump: '💥', edge: '🚫', water: '💦', gate: '🔒', nohome: '🏠 ❓', guess: `${FRUITS[p][S.pick[p]] || ''} ❌`, stars: '⭐ ❓', empty: '🧺 ❓' }[reason] || '💥';
+  const why = { bump: '💥', edge: '🚫', water: '💦', gate: '🔒', nohome: '🏠 ❓', guess: `${FRUITS[p][S.pick[p]] || ''} ❌`, stars: '⭐ ❓', empty: '🧺 ❓', loop: '🌀 🏠 ❓', ghost: '👻 😱' }[reason] || '💥';
   const say = {
     bump: `¡Ups! ${n} se chocó. ¡Prueben otra vez!`,
     edge: `¡Ups! ${n} se quiso salir del mapa.`,
@@ -772,7 +848,9 @@ function fail(p, reason) {
     nohome: `¡Casi! ${n} no llegó a su casita.`,
     guess: `¡Uy! ${n} terminó en otro lugar. ¡Miren las flechas otra vez!`,
     stars: '¡Faltaron estrellas! Hay que juntarlas todas con la canasta.',
-    empty: `¡Ups! ${n} quiso juntar, pero ahí no había estrella.`
+    empty: `¡Ups! ${n} quiso juntar, pero ahí no había estrella.`,
+    loop: `¡Uf! ${n} dio muchas vueltas sin encontrar su casita y se mareó. ¡Fíjense hacia dónde está!`,
+    ghost: `¡Buuu! ${n} se fue y dejó un fantasma sin alumbrar. ¡Hay que alumbrarlo!`
   }[reason];
   Snd.play('fail');
   setTimeout(() => {
@@ -792,14 +870,19 @@ async function win() {
   S.running = false;
   $$('.panel').forEach(p => p.classList.remove('active'));
   Snd.play('win'); confetti(90);
-  const total = S.stars.length, rating = (total === 0 || S.got === total) ? 3 : 2;
+  const total = S.W.total, rating = (total === 0 || S.W.got === total) ? 3 : 2;
+  // 💎: premio extra por usar pocos bloques (nunca resta; las estrellas no dependen de esto)
+  const par = !isPredict() && !S.custom && S.L.par, gem = !!par && countOf('A') <= par.A && countOf('B') <= par.B;
   if (!S.custom) {
     S.save.stars[S.idx] = Math.max(S.save.stars[S.idx] || 0, rating);
+    if (gem) (S.save.gems = S.save.gems || {})[S.idx] = true;
     if (worldOf(S.idx) < FREE_FROM) S.save.unlocked = Math.max(S.save.unlocked, Math.min(S.idx + 1, LEVELS.length - 1));
     save();
   }
   await sleep(900);
   $('#win-stars').innerHTML = [0, 1, 2].map(k => `<span class="${k < rating ? '' : 'empty'}" style="animation-delay:${.15 + k * .25}s">⭐</span>`).join('');
+  const gi = $('#win-gem'); gi.hidden = !par; gi.className = 'win-gem' + (gem ? '' : ' empty');
+  gi.innerHTML = par ? `<span>💎</span><small>${par.A}·${par.B}</small>` : '';
   $('#win-A').innerHTML = titoSVG(); $('#win-B').innerHTML = lulaSVG();
   $('#win-sticker').textContent = S.custom ? '🛠️' : STICKERS[S.idx];
   S.hf = { A: false, B: false };
@@ -807,7 +890,7 @@ async function win() {
   overlay('ov-win');
   [0, 1, 2].forEach(k => k < rating && setTimeout(() => Snd.play('star'), 150 + k * 250));
   Voice.say(['¡Genial!', '¡Excelente!', '¡Bravo!', '¡Súper!'][Math.floor(Math.random() * 4)] +
-    (rating < 3 ? ' Les faltaron estrellas.' : '') + ' ¡Chóquenla!');
+    (rating < 3 ? ' Les faltaron estrellas.' : '') + (gem ? ' ¡Y ganaron el diamante!' : '') + ' ¡Chóquenla!');
 }
 function highFive(p) {
   if (S.overlay !== 'ov-win' || S.hf[p]) return;
@@ -874,7 +957,7 @@ function hint() {
     let path;
     if (isPredict()) {
       path = [S.start[p]]; let { x, y } = S.start[p];
-      for (const st of flatten(parseProg(S.L.pre[p]))) { x += DIRS[st.d][0]; y += DIRS[st.d][1]; path.push({ x, y }); }
+      for (const st of Engine.flatten(parseProg(S.L.pre[p]))) if (DIRS[st.d]) { x += DIRS[st.d][0]; y += DIRS[st.d][1]; path.push({ x, y }); }
       path.push({});
     } else if (p === first && S.pads.length) {
       path = bfs(S.start[p], S.pads[0], false).concat(bfs(S.pads[0], S.homes[p], false).slice(1));
@@ -1092,8 +1175,9 @@ function checkTeacher() {
 }
 
 /* ---------- Teclado (dos jugadores en la misma compu) ---------- */
-const KEYS_A = { KeyW: 'u', KeyA: 'l', KeyS: 'd', KeyD: 'r', KeyR: 'rep', KeyF: 'j', KeyQ: 'back', KeyE: 'ready' };
-const KEYS_B = { ArrowUp: 'u', ArrowLeft: 'l', ArrowDown: 'd', ArrowRight: 'r', ShiftRight: 'rep', ControlRight: 'j', Backspace: 'back', Enter: 'ready', NumpadEnter: 'ready' };
+// Z / X y , / . : menos y más veces en el último repetir
+const KEYS_A = { KeyW: 'u', KeyA: 'l', KeyS: 'd', KeyD: 'r', KeyR: 'rep', KeyF: 'j', KeyT: 'h', KeyG: 'c', KeyV: 'g', KeyZ: 'rep-', KeyX: 'rep+', KeyQ: 'back', KeyE: 'ready' };
+const KEYS_B = { ArrowUp: 'u', ArrowLeft: 'l', ArrowDown: 'd', ArrowRight: 'r', ShiftRight: 'rep', ControlRight: 'j', KeyP: 'h', KeyL: 'c', KeyK: 'g', Comma: 'rep-', Period: 'rep+', Backspace: 'back', Enter: 'ready', NumpadEnter: 'ready' };
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') { if (e.key === 'Enter') checkTeacher(); return; }
   if (e.repeat) return;

@@ -24,14 +24,14 @@ button:disabled{cursor:default}
 /* ---------- Cielo (estático) ---------- */
 .sky{position:fixed;inset:0;background:linear-gradient(var(--sky1),var(--sky2));overflow:hidden;z-index:0}
 .sun{position:absolute;top:-50px;right:8%;width:150px;height:150px;border-radius:50%;background:radial-gradient(#fff6a8,#ffd23f 65%,#ffb703)}
-body.w3 .sun{background:radial-gradient(#fff,#ddd 60%,#bbb);width:100px;height:100px;top:20px}
-body.w3 .sky::before{content:"";position:absolute;inset:0;background-image:radial-gradient(2px 2px at 10% 20%,#fff,transparent),radial-gradient(2px 2px at 30% 60%,#fff,transparent),radial-gradient(2px 2px at 50% 15%,#fff,transparent),radial-gradient(2px 2px at 70% 40%,#fff,transparent),radial-gradient(2px 2px at 85% 75%,#fff,transparent),radial-gradient(2px 2px at 20% 85%,#fff,transparent),radial-gradient(3px 3px at 60% 80%,#ffd23f,transparent),radial-gradient(2px 2px at 92% 12%,#fff,transparent)}
+body.w3 .sun,body.x2 .sun{background:radial-gradient(#fff,#ddd 60%,#bbb);width:100px;height:100px;top:20px}
+body.w3 .sky::before,body.x2 .sky::before{content:"";position:absolute;inset:0;background-image:radial-gradient(2px 2px at 10% 20%,#fff,transparent),radial-gradient(2px 2px at 30% 60%,#fff,transparent),radial-gradient(2px 2px at 50% 15%,#fff,transparent),radial-gradient(2px 2px at 70% 40%,#fff,transparent),radial-gradient(2px 2px at 85% 75%,#fff,transparent),radial-gradient(2px 2px at 20% 85%,#fff,transparent),radial-gradient(3px 3px at 60% 80%,#ffd23f,transparent),radial-gradient(2px 2px at 92% 12%,#fff,transparent)}
 .cloud{position:absolute;width:160px;height:50px;background:#fff;border-radius:50px;opacity:.85}
 .cloud::before,.cloud::after{content:"";position:absolute;background:#fff;border-radius:50%}
 .cloud::before{width:70px;height:70px;top:-35px;left:25px}
 .cloud::after{width:90px;height:90px;top:-50px;left:65px}
 .c1{top:14%;left:6%}.c2{top:30%;left:70%;transform:scale(.7)}.c3{top:8%;left:40%;transform:scale(1.1)}
-body.w3 .cloud{display:none}
+body.w3 .cloud,body.x2 .cloud,body.x4 .cloud{display:none}
 .hill{position:absolute;border-radius:50%;bottom:-55vh}
 .h1{left:-20vw;width:90vw;height:80vh;background:var(--hill1)}
 .h2{right:-25vw;width:100vw;height:75vh;background:var(--hill2)}
@@ -99,7 +99,7 @@ body.w3 .cloud{display:none}
 .tile{position:absolute;width:var(--cell);height:var(--cell);left:calc(var(--x)*var(--cell));top:calc(var(--y)*var(--cell));display:grid;place-items:center;font-size:calc(var(--cell)*.62);line-height:1;background:var(--g0)}
 .tile.g1{background:var(--g1)}
 .tile.water{background:var(--water) repeating-linear-gradient(120deg,transparent 0 14px,rgba(255,255,255,.25) 14px 18px)}
-body.w3 .tile.water{background:radial-gradient(circle,#000 30%,#2a1f63 75%,var(--g0) 76%)}
+body.w3 .tile.water,body.x2 .tile.water{background:radial-gradient(circle,#000 30%,#2a1f63 75%,var(--g0) 76%)}
 .tile .flower{font-size:calc(var(--cell)*.38);opacity:.85}
 .ent{position:absolute;left:0;top:0;width:var(--cell);height:var(--cell);transform:translate(calc(var(--x)*var(--cell)),calc(var(--y)*var(--cell)));display:grid;place-items:center;pointer-events:none}
 .home svg{width:84%;height:84%}
@@ -372,3 +372,78 @@ body.w3 .tile.water{background:radial-gradient(circle,#000 30%,#2a1f63 75%,var(-
 .rep-prev .mini{width:14px;height:14px;font-size:10px}
 .rep-prev .mini svg{width:12px;height:12px}
 .rep-close{height:26px;font-size:16px;padding:0 12px}
+
+
+/* ================= 2.º grado ================= */
+/* Temas por mundo (clase x0..x5 en el body, para no pisarse con w0..w7 de 1.º) */
+body.x0{--g0:#b6ea8e;--g1:#a6df7d;--frame:#c46b3a;--frame2:#9a4f27;--sky1:#8fd8ff;--sky2:#fff0f6;--hill1:#9fe58a;--hill2:#78d070}
+body.x1{--g0:#dcdde6;--g1:#cdcfdb;--water:#6bb7e8;--frame:#6b7488;--frame2:#4a5266;--sky1:#a4c9ee;--sky2:#eef1f7;--hill1:#b9c2d3;--hill2:#9aa6bc}
+body.x2{--g0:#4b4488;--g1:#433d7b;--water:#141030;--frame:#2a2456;--frame2:#18143a;--sky1:#120f33;--sky2:#3d2f7a;--hill1:#5a4ba3;--hill2:#4a3d8f}
+body.x3{--g0:#d3d6bd;--g1:#c5c9ac;--water:#5fb4e8;--frame:#8d6e63;--frame2:#5d4037;--sky1:#9fc5ff;--sky2:#fdf1d6;--hill1:#8fc77a;--hill2:#6fb46a}
+body.x4{--g0:#6b5a82;--g1:#5f4f76;--water:#2a1d45;--frame:#3a2a52;--frame2:#241638;--sky1:#2b1f45;--sky2:#5a3d7a;--hill1:#4a3a68;--hill2:#3b2d58}
+body.x5{--g0:#e3b58c;--g1:#d6a479;--water:#ff7a3c;--frame:#7a3b2e;--frame2:#4e241c;--sky1:#ff9a62;--sky2:#ffe1b0;--hill1:#a8503a;--hill2:#7d3a2c}
+
+/* Inicio: píldoras 1° / 2° */
+.grades{display:flex;gap:10px;margin:0 0 14px}
+.grade{min-width:68px;height:46px;border-radius:23px;background:#fff;font-size:26px;font-weight:700;box-shadow:0 4px 0 rgba(0,0,0,.15);color:var(--ink)}
+.grade.on{background:var(--yellow);transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.2)}
+
+/* Bloques nuevos */
+.d-c{background:#e8a200}.d-g{background:#5a64c8}
+.cico{display:inline-flex;align-items:center;justify-content:center;line-height:1.05}
+.cico b{font-weight:400}
+.pal .cico{flex-direction:column;font-size:13px}
+.blk .cico,.ghost .cico{flex-direction:row;gap:5px;font-size:21px}
+.pal.cp{background:#e8a200;color:#fff}.pal.gp{background:#5a64c8;color:#fff}
+.pal.hp{background:#c2255c;color:#fff;font-size:20px}
+.pal.cp.hide,.pal.gp.hide{display:none}
+.rep.until .rep-head,.rep.until .rep-foot,.rep.until .rep-body::before{background:#c2255c}
+.rep-home{font-size:24px;line-height:1}
+.rep-prev .more{font-size:12px;margin-left:3px;color:#fff;white-space:nowrap}
+.ghost .cico{flex-direction:column;font-size:15px;gap:0}
+
+/* Tablero: cofres, fantasmas, casitas que se mueven */
+.ent.hide{display:none}
+.home{transition:transform .25s ease-in-out}
+.home.cand{opacity:.6}
+.home.cand::before{content:"";position:absolute;inset:8%;border:4px dashed rgba(255,255,255,.95);border-radius:20px}
+.box .bx{display:block;font-size:calc(var(--cell)*.55);transition:transform .25s,opacity .25s}
+.box.open .bx{opacity:.3;transform:scale(.7)}
+.spook .gh,.puff .gh{display:block;font-size:calc(var(--cell)*.55)}
+.spook.lit .gh{animation:poof .5s forwards}
+.puff .gh{animation:poof .6s forwards}
+@keyframes poof{to{transform:translateY(-30px) scale(1.4);opacity:0}}
+
+/* 💎: meta de bloques en el programa, premio en la tarjeta y en el mapa */
+.dots{flex:1;min-width:0;max-height:36px;overflow:hidden}
+.gem{margin-left:auto;font-size:14px;line-height:1.2;background:rgba(255,255,255,.3);border-radius:10px;padding:1px 6px;white-space:nowrap;flex:0 0 auto;font-weight:700}
+.win-gem{font-size:46px;line-height:1;margin:2px 0 6px}
+.win-gem span{display:inline-block;animation:pop .45s ease-out .8s backwards}
+.win-gem small{font-size:18px;margin-left:8px;color:#6a6a8a;font-weight:700}
+.win-gem.empty span{opacity:.2}
+.gem-m{margin-left:3px}.gem-m.no{opacity:.2}
+
+/* Paleta del 2.º grado: 4 columnas compactas, solo se ven los botones que usa el nivel */
+body.g2 .palette{grid-template-columns:repeat(4,1fr);gap:5px}
+body.g2 .pal{grid-column:auto!important;grid-row:auto!important;height:44px;border-radius:13px;box-shadow:0 4px 0 rgba(0,0,0,.22)}
+body.g2 .pal:active,body.g2 .pal.press{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.22)}
+body.g2 .pal.hide{display:none}
+body.g2 .pal.left{order:1}body.g2 .pal.up{order:2}body.g2 .pal.down{order:3}body.g2 .pal.right{order:4}
+body.g2 .pal.rp{order:5;height:44px;font-size:22px}body.g2 .pal.hp{order:6}body.g2 .pal.cp{order:7}body.g2 .pal.gp{order:8}body.g2 .pal.jp{order:9;font-size:24px}
+body.g2 .pal svg{width:28px;height:28px}
+body.g2 .pal .key{bottom:1px;right:3px;left:auto;transform:none;font-size:9px;padding:0 3px;border-radius:5px;box-shadow:none;opacity:.85}
+body.g2 .pal .rp-txt{font-size:20px;line-height:1}
+body.g2 .pal.hp .rp-txt{font-size:15px}
+body.g2 .p-actions .act{height:40px;font-size:20px}
+body.g2 .ready{height:54px;font-size:30px}
+body.g2 .p-head .avatar{width:44px;height:44px}
+body.g2 .panel{gap:6px}
+@media (max-height:720px){
+  body.g2 .p-head{padding:2px 8px}body.g2 .p-head .avatar{width:38px;height:38px}
+  body.g2 .pal{height:40px}body.g2 .pal.rp{height:40px}
+  body.g2 .ready{height:46px;font-size:26px}
+  body.g2 .p-actions .act{height:36px}
+}
+/* 6 mundos en el mapa: filas un poco más bajas para que entren con la barra de arriba en 1024x600 */
+body.g2 .lv{height:clamp(44px,10vh,92px)}
+body.g2 .map-wrap{gap:8px;padding-bottom:12px}
