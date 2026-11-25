@@ -110,10 +110,10 @@ Computers move from one class to the next (classes last ~50 min), so a new pair 
 - [x] T2 New blocks, boxes, moving house (delegated)
 - [x] T3 36 second-grade levels, gem (delegated)
 - [x] T3b Scratch-like drag workspace, added on user request (delegated, after T3)
-- [ ] T4 Race mode (delegated)
-- [ ] T5 Coins and wardrobe (delegated)
-- [ ] T6 Class-long progress with reset, map first, friction fixes, teacher panel, README, cache bump (delegated)
-- [ ] T7 Parent verification in a real browser, both grades, screenshots
+- [x] T4 Race mode (delegated)
+- [x] T5 Coins and wardrobe (delegated)
+- [x] T6 Class-long progress with reset, map first, friction fixes, teacher panel, README, cache bump (delegated)
+- [x] T7 Parent verification in a real browser, both grades, screenshots
 
 ## Checks
 `node tools/check-levels.mjs` passes; browser script plays every 2nd-grade level and 1st-grade smoke with no console errors.
@@ -126,3 +126,7 @@ Computers move from one class to the next (classes last ~50 min), so a new pair 
 - T3b (delegated, b012bb0): parent re-ran check-levels (ok) and check-workspace (ok, 12369 asserts) and looked at the
   screenshots. Workspace 218x434 at 1024x600, 303x548 at 1366x768, no overlaps. Writer's drag script: 60 checks, 0 failures,
   including two simultaneous touches. Cramped but not broken at 980x720 (203px tall).
+- T6 (5c1a3bb), T4 (54e937a, includes the sleep fix) delegated; T5 (bbcb716) finished inline by the parent because the
+  writer stalled twice on permission prompts while the user was away. All node checks pass; browser: full.mjs ok, session 129,
+  race 48, drag 60, wardrobe 36, 0 console errors. Pushed to main and deployed 12:31 ART, live files match the commit.
+- Pending: emoji look and real touch screens unverified (no emoji font on the Pi); Engram mirror.
