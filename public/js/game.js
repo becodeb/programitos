@@ -263,11 +263,11 @@ function beginSession() {
   const st = SESS.state().status;
   if (st === 'expired') { SESS.wipe(); resetMemory(); }
   else ensureSession();
-  SESS.start();
+  SESS.start(); Idle.slept = false;
 }
 // Volver al inicio: acá se borra lo vencido, y también lo que otra pestaña borró (no se resucita desde la memoria)
 function goStart() {
-  overlay(null); Voice.stop();
+  overlay(null); Voice.stop(); leaveRace();
   const st = SESS.state().status;
   if (st === 'expired') { SESS.wipe(); resetMemory(); }
   else if (st === 'none' && memProgress()) resetMemory();
@@ -312,7 +312,7 @@ function join(p) {
 /* ---------- Mapa ---------- */
 function openMap() {
   if (SESS.state().status === 'none' && memProgress()) resetMemory();      // otra pestaña borró el progreso
-  overlay(null); show('scr-map'); Voice.stop(); setWorld(Math.min(WORLDS.length - 1, worldOf(S.save.unlocked))); S.duo = null;
+  leaveRace(); overlay(null); show('scr-map'); Voice.stop(); setWorld(Math.min(WORLDS.length - 1, worldOf(S.save.unlocked))); S.duo = null;
   const box = $('#levels'); box.innerHTML = '';
   WORLDS.forEach((W, w) => {
     const row = document.createElement('div');
@@ -342,7 +342,7 @@ function buildPanel(p) {
   const k = isA ? { u: 'W', l: 'A', d: 'S', r: 'D', j: 'F', rep: 'R', h: 'T', c: 'G', g: 'V', back: 'Q', ready: 'E' }
                 : { u: '↑', l: '←', d: '↓', r: '→', j: 'Ctrl', rep: 'Shift', h: 'P', c: 'L', g: 'K', back: '⌫', ready: 'Enter' };
   el.innerHTML = `
-    <div class="p-head"><div class="avatar">${P[p].svg()}</div><div class="order" id="order-${p}"></div>
+    <div class="p-head"><div class="avatar">${P[p].svg()}</div><div class="order" id="order-${p}"></div><div class="coin-ct" id="coin-${p}"></div>
       <div class="p-actions">
         <button class="act" data-act="back" title="Borrar el último">⌫<span class="key">${k.back}</span></button>
         <button class="act" data-act="clear" title="Borrar todo">🗑️</button>
@@ -364,7 +364,7 @@ function buildPanel(p) {
     <div class="predict">${FRUITS[p].map((f, i) => `<button class="pick-btn" data-pick="${i}">${f}</button>`).join('')}</div>
     <button class="ready" data-act="ready"><span class="ready-txt">▶</span><span class="key">${k.ready}</span></button>`;
   el.onclick = e => {
-    const b = e.target.closest('button'); if (!b || S.running || S.overlay) return;
+    const b = e.target.closest('button'); if (!b || isBusy(p) || S.overlay) return;
     if (b.dataset.act) return act(p, b.dataset.act);
     if (b.dataset.pick !== undefined) return pick(p, +b.dataset.pick);
     if (isPredict()) return;
@@ -377,9 +377,11 @@ function buildPanel(p) {
   };
 }
 
+// En la carrera cada chico corre por su cuenta: ocupado es solo el que está corriendo
+const isBusy = p => S.race ? !!S.race.busy[p] : S.running;
 function act(p, a) {
-  if (S.running || S.overlay || (WS && WS.dragging(p))) return;
-  if (a === 'ready') return toggleReady(p);
+  if (isBusy(p) || S.overlay || (WS && WS.dragging(p))) return;
+  if (a === 'ready') return S.race ? raceGo(p) : toggleReady(p);
   if (isPredict()) return;
   const prog = S.prog[p], last = prog[prog.length - 1];
   const openRep = last && last.t === 'rep' && last.open ? last : null;
@@ -491,7 +493,7 @@ function renderProg(p) {
     b.classList.toggle('closing', !!open);
     b.querySelector('.rp-txt').textContent = open ? '✔️' : ico;
   });
-  $(`#panel-${p} .ready`).disabled = isPredict() ? S.pick[p] === null : n === 0;
+  $(`#panel-${p} .ready`).disabled = isBusy(p) || (isPredict() ? S.pick[p] === null : n === 0);
   placeTuto(p);
 }
 // Herramientas del nivel en una columna al costado del área; si no entran a lo alto, pasan a dos columnas
@@ -518,7 +520,7 @@ let WS = null;                                         // se arma en init(), cua
 function attachWorkspace() {
   WS = Workspace.attach({
     S,
-    busy: p => S.running,                              // la carrera (cada chico por su cuenta) lo cambia por chico
+    busy: isBusy,                                      // en la carrera, por chico
     active: () => !S.overlay && !!S.L && $('#scr-game').classList.contains('active'),
     predict: isPredict,
     hasTool: a => S.L.tools.includes(a),
@@ -576,6 +578,7 @@ function unready(p) {
 
 /* ---------- Nivel ---------- */
 function startLevel(i, customL) {
+  leaveRace();
   if (!customL) { S.duo = null; ensureSession(); }
   S.custom = !!customL; S.idx = i; S.L = customL || LEVELS[i]; S.fails = 0; S.ran = false;
   S.prog = { A: parseProg(S.L.pre?.A), B: parseProg(S.L.pre?.B) }; S.loose = { A: [], B: [] };
@@ -755,12 +758,14 @@ function openBox(ev) {
   else S.dyn.push(ent('puff', ev.x, ev.y, '<span class="gh">💨</span>'));
 }
 const spookAt = (x, y) => S.dyn.find(e => e.classList.contains('spook') && +e.style.getPropertyValue('--x') === x && +e.style.getPropertyValue('--y') === y);
-async function runRobot(p) {
+async function runRobot(p, w) {
+  w = w || S.W; const R = S.race;
   const r = S.pos[p];
   const tgt = isPredict() ? S.L.opts[p][S.pick[p]] : null;
   const face = dir => { const dx = DIRS[dir][0]; if (dx) r.el.classList.toggle('left', dx < 0); };
   const hop = cls => { r.el.classList.remove('hop', 'jump', 'bump'); void r.el.offsetWidth; r.el.classList.add(cls); };
-  for (const ev of Engine.run(S.W, p, S.prog[p], { target: tgt ? { x: tgt[0], y: tgt[1] } : null })) {
+  for (const ev of Engine.run(w, p, S.prog[p], { target: tgt ? { x: tgt[0], y: tgt[1] } : null })) {
+    if (R && S.race !== R) return { ok: false, reason: 'abort' };       // se fueron de la carrera en medio de la corrida
     switch (ev.e) {
       case 'op': markRun(p, ev); if (ev.d === 'j') hop('hop'); break;
       case 'cond':                                  // 👀 el robot "mira" y dice si sí (✔) o no (✖)
@@ -781,6 +786,9 @@ async function runRobot(p) {
         S.pads.forEach(pd => pd.el.classList.add('on')); Snd.play('press'); await sleep(150);
         S.gates.forEach(g => g.el.classList.add('open')); Snd.play('gate'); fx(p, '✨'); await sleep(400); break;
       case 'home':
+        if (R && S.L.need && w.stars.some(st => (st.x < Race.LANE ? 'A' : 'B') === p && !st.got)) {      // carrera: faltó su estrella
+          r.el.classList.remove('hop', 'jump'); r.el.classList.add('sad'); fx(p, '⭐'); return { ok: false, reason: 'stars' };
+        }
         r.el.classList.remove('hop', 'jump');
         S.homes[p]?.el.classList.add('glow'); r.el.classList.add('dance'); Snd.play('home'); fx(p, '❤️');
         return { ok: true };
@@ -923,6 +931,7 @@ function bfs(from, to, gatesOpen) {
   return [];
 }
 function hint() {
+  if (S.race) return S.overlay ? null : raceHint(['A', 'B']);
   if (S.running || S.overlay) return;
   Snd.play('star'); $('#btn-hint').classList.remove('glow');
   $$('#board .foot').forEach(f => f.remove());
@@ -1111,6 +1120,107 @@ function duoPlay() {
   setTimeout(() => { Snd.play('go'); startLevel(0, levels[0]); S.duo = { levels, i: 0 }; }, 500);
 }
 
+/* ---------- 🏁 Carrera: cada chico corre por su cuenta, 5 rondas, monedas ---------- */
+let RACE_ID = 0;
+function renderCoins() { ['A', 'B'].forEach(p => { const e = $('#coin-' + p); if (e) e.textContent = '🪙 ' + PF.coins[p]; }); }
+function addCoins(p, n) { ensureSession(); PF.coins[p] += n; savePF(); renderCoins(); }
+function startRace() {
+  ensureSession();
+  leaveRace();
+  S.race = { id: ++RACE_ID, n: 0, busy: { A: false, B: false }, fails: { A: 0, B: 0 }, arrived: [], won: { A: 0, B: 0 }, timer: null, flag: null, dead: false };
+  S.duo = null; S.custom = true; S.idx = 0;
+  raceRound(1);
+}
+function leaveRace() {
+  const R = S.race; if (!R) return;
+  R.dead = true; clearTimeout(R.timer); S.race = null; S.custom = false;
+  document.body.classList.remove('race');
+}
+function raceRound(n) {
+  const R = S.race; if (!R) return;
+  clearTimeout(R.timer);
+  const r = Race.round(GRADE, n);
+  R.n = n; R.arrived = []; R.fails = { A: 0, B: 0 }; R.busy = { A: false, B: false }; R.flag = null; R.rd = r;
+  S.L = r.L; S.fails = 0; S.ran = true;
+  S.prog = { A: [], B: [] }; S.loose = { A: [], B: [] }; S.ready = { A: false, B: false }; S.pick = { A: null, B: null }; S.tuto = null;
+  overlay(null); show('scr-game'); setWorld(0); document.body.classList.add('race');
+  $('#lvl-num').textContent = '🏁'; $('#lvl-world').textContent = '●'.repeat(n) + '○'.repeat(Race.ROUNDS - n);
+  setTools(); parseLevel(); renderBoard();
+  $('#board').style.setProperty('--step', (stepMs() * .85) / 1000 + 's');
+  ['A', 'B'].forEach(p => { unready(p); renderProg(p); }); renderCoins();
+  setBubble('🏁');
+  Voice.say(n === 1 ? '¡Carrera! Cada uno corre con su propio botón. ¡El primero en llegar gana más monedas!' : `¡Ronda ${n}!`);
+  const id = R.id;
+  R.timer = setTimeout(() => { if (S.race && S.race.id === id && S.race.n === n) raceHint(['A', 'B'].filter(q => !R.arrived.includes(q))); }, 60000);   // 60 s sin llegar: huellitas
+}
+function resetRobot(p) {
+  const r = S.pos[p]; r.el.style.transition = 'none';
+  placeRobot(p, S.start[p].x, S.start[p].y);
+  r.face = initialLeft(p) ? 'l' : 'r';
+  r.el.className = 'ent robot r-' + p + (r.face === 'l' ? ' left' : '');
+  void r.el.offsetWidth; r.el.style.transition = '';
+  if (S.homes[p] && S.homes[p].el) S.homes[p].el.classList.remove('glow');
+  S.stars.forEach(st => { if ((st.x < Race.LANE ? 'A' : 'B') === p) st.el.classList.remove('got'); });
+  $$(`#board .foot[data-p="${p}"]`).forEach(f => f.remove());
+}
+async function raceGo(p) {
+  const R = S.race; if (!R || R.busy[p] || R.arrived.includes(p) || S.overlay || !countOf(p)) return;
+  const id = R.id, n = R.n, alive = () => S.race && S.race.id === id && S.race.n === n;
+  Voice.stop(); WS.cancel(p); $$(`.tuto-hand[data-p="${p}"]`).forEach(h => h.remove());
+  resetRobot(p);
+  R.busy[p] = true; $('#panel-' + p).classList.add('locked'); $(`#panel-${p} .ready`).disabled = true;
+  const w = Engine.world(S.L, Engine.variants(S.L)[0]);
+  const res = await runRobot(p, w);
+  if (!alive()) return;
+  markRun(p, null);
+  if (res.ok) return raceArrive(p);
+  await sleep(res.reason === 'bump' || res.reason === 'edge' || res.reason === 'water' ? 400 : 700);
+  if (!alive()) return;
+  // Si algo no sale, el robot vuelve a la salida y el programa se queda para probar otra vez
+  resetRobot(p); R.busy[p] = false; $('#panel-' + p).classList.remove('locked'); renderProg(p);
+  if (++R.fails[p] >= 3) raceHint([p]);
+}
+async function raceArrive(p) {
+  const R = S.race, id = R.id, n = R.n, alive = () => S.race && S.race.id === id && S.race.n === n;
+  R.arrived.push(p);
+  const coins = R.arrived.length === 1 ? 2 : 1;
+  R.won[p] += coins; addCoins(p, coins);
+  fx(p, '🪙'.repeat(coins)); Snd.play('star');
+  $(`#board .foot[data-p="${p}"]`) && $$(`#board .foot[data-p="${p}"]`).forEach(f => f.remove());
+  if (R.arrived.length === 1) {                       // una banderita amistosa para el que todavía no llegó, sin apuro
+    const o = p === 'A' ? 'B' : 'A', h = S.homes[o];
+    R.flag = ent('flag', h.x, h.y, '<span class="fl">🏁</span>'); Snd.play('ready');
+    return;
+  }
+  if (R.flag) R.flag.remove();
+  await sleep(1100); if (!alive()) return;
+  const last = n >= Race.ROUNDS;
+  if (last) return raceFinish();
+  const vs = ['A', 'B'].map(q => `<div class="rc"><div class="ch">${P[q].svg()}</div><div class="rc-coins">${'🪙'.repeat(R.arrived.indexOf(q) === 0 ? 2 : 1)}</div></div>`).join('');
+  $('#round-body').innerHTML = `<div class="rc-dots">${'●'.repeat(n)}${'○'.repeat(Race.ROUNDS - n)}</div><div class="rc-row">${vs}</div>`;
+  overlay('ov-round'); Snd.play('clap');
+  await sleep(2000); if (!alive()) return;
+  raceRound(n + 1);
+}
+function raceFinish() {
+  const R = S.race;
+  $('#race-A').innerHTML = P.A.svg(); $('#race-B').innerHTML = P.B.svg();
+  $('#race-coins').innerHTML = ['A', 'B'].map(q => `<span>${'🪙'.repeat(Math.min(R.won[q], 10)) || '·'}<b>${R.won[q]}</b></span>`).join('');
+  overlay('ov-race-end'); Snd.play('win'); confetti(150);
+  Voice.say('¡Terminó la carrera! ¡Los dos son campeones!');
+}
+function raceAgain() { if (S.overlay === 'ov-race-end') startRace(); }
+// Huellitas en el carril de quien se trabó (3 intentos o 60 s)
+function raceHint(ps) {
+  if (!S.race) return;
+  Snd.play('star');
+  ps.forEach(p => {
+    if (S.race.arrived.includes(p)) return;
+    $$(`#board .foot[data-p="${p}"]`).forEach(f => f.remove());
+    footprints(p, Engine.route(S.L, p).cells.slice(1, -1), new Set(S.stars.map(t => key(t.x, t.y))));
+  });
+}
+
 /* ---------- Confeti (liviano) ---------- */
 const cv = $('#confetti'), cx = cv.getContext('2d');
 let parts = [], confRAF = null;
@@ -1175,6 +1285,7 @@ document.addEventListener('keydown', e => {
   if (scr === 'scr-duo' && !S.overlay) { if (A) duoReady('A'); if (B) duoReady('B'); return; }
   if (S.overlay === 'ov-win') { if (A) highFive('A'); if (B) highFive('B'); return; }
   if (S.overlay === 'ov-world') { if (A) swapReady('A'); if (B) swapReady('B'); return; }
+  if (S.overlay === 'ov-race-end') { if (A || B) raceAgain(); return; }
   if (S.overlay === 'ov-fail') { if (A || B || e.code === 'Space') retry(); return; }
   if (S.overlay) { if (e.code === 'Escape') overlay(null); return; }
   if (scr !== 'scr-game' || S.running) return;
@@ -1184,27 +1295,35 @@ document.addEventListener('keydown', e => {
 /* ---------- Vigilante de la sesión: reloj parado y pantalla dormida ---------- */
 // Vencida + 3 minutos sin tocar nada (o la compu volvió de dormida/oculta tras 3+ minutos) = otra clase: se borra y vuelve el inicio.
 // Nunca en medio de una corrida, de un arrastre ni mientras alguien toca (el tiempo "sin tocar" se mide con reloj propio, no con el de la sesión).
-const Idle = { last: performance.now(), tick: clockNow(), hiddenAt: 0, ms: 3 * 60 * 1000, sleepMs: 3 * 60 * 1000, recent: 20000 };
+const Idle = { last: performance.now(), tick: clockNow(), hiddenAt: 0, ms: 3 * 60 * 1000, sleepMs: 3 * 60 * 1000, slept: false };
 const quiet = () => !S.running && !(WS && ['A', 'B'].some(p => WS.dragging(p))) && !(S.race && (S.race.busy.A || S.race.busy.B));
 function endClass() {
-  Idle.last = performance.now(); Idle.tick = clockNow();
+  Idle.last = performance.now(); Idle.tick = clockNow(); Idle.slept = false;
   goStart();
 }
-function sessionTick() {
-  const t = clockNow(), jump = t - Idle.tick; Idle.tick = t;
-  if (SESS.state().status !== 'expired') { SESS.touch(); return; }
-  if (!quiet() || S.overlay === 'ov-count') return;
-  const still = performance.now() - Idle.last;
-  if (still >= Idle.ms || (jump >= Idle.sleepMs && still >= Idle.recent)) endClass();
+// Una compu dormida (o con la tapa cerrada) no avanza los temporizadores pero el reloj sí: si entre dos "latidos" el reloj saltó
+// 3+ minutos es porque estuvo dormida. Esa evidencia queda pegada (aunque los nuevos chicos toquen enseguida) hasta que se resuelva.
+function noteClock() {
+  const t = clockNow(); if (t - Idle.tick >= Idle.sleepMs) Idle.slept = true; Idle.tick = t;
+  return Idle.slept;
 }
+// Vencida y (dormida o 3 min sin tocar) = otra clase: se borra y vuelve el inicio, salvo en plena corrida/arrastre (apenas pase, se borra)
+function judge() {
+  if (SESS.state().status !== 'expired') { Idle.slept = false; return false; }
+  if (!quiet() || S.overlay === 'ov-count') return false;
+  if (Idle.slept || performance.now() - Idle.last >= Idle.ms) { endClass(); return true; }
+  return false;
+}
+function sessionTick() { noteClock(); if (!judge()) SESS.touch(); }
 function sessionWatch() {
-  const touched = () => { Idle.last = performance.now(); };
+  const touched = () => { if (noteClock()) judge(); Idle.last = performance.now(); };
   ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'wheel'].forEach(n => addEventListener(n, touched, { capture: true, passive: true }));
+  ['focus', 'pageshow'].forEach(n => addEventListener(n, () => { if (noteClock()) judge(); }));
   setInterval(sessionTick, 15000);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { Idle.hiddenAt = clockNow(); return; }
-    if (clockNow() - Idle.hiddenAt >= Idle.sleepMs && SESS.state().status === 'expired' && quiet()) endClass();
-    Idle.tick = clockNow();
+    if (clockNow() - Idle.hiddenAt >= Idle.sleepMs) Idle.slept = true;
+    noteClock(); judge();
   });
   // Otra pestaña borró el progreso (🔄, vencimiento): esta no lo resucita desde su memoria
   addEventListener('storage', e => {
@@ -1229,7 +1348,9 @@ function init() {
   $('#btn-reset').onclick = openReset; $('#start-reset').onclick = openReset;
   $('#reset-yes').onclick = resetAll; $('#reset-no').onclick = () => { Snd.play('click'); overlay(null); };
   $('#btn-skip').onclick = skipLevel;
-  $('#btn-map').onclick = () => { if (S.running) return; S.custom && !S.duo ? openEditor() : openMap(); };
+  $('#btn-map').onclick = () => { if (S.race) return openMap(); if (S.running) return; S.custom && !S.duo ? openEditor() : openMap(); };
+  $('#btn-race').onclick = () => { Snd.play('click'); startRace(); };
+  $('#race-again').onclick = raceAgain; $('#race-map').onclick = openMap;
   $('#btn-hint').onclick = hint;
   $('#btn-say').onclick = () => Voice.say(S.L?.say || $('#bubble-text').textContent);
   $('#btn-speed').onclick = () => { S.fast = !S.fast; syncToggles(); Snd.play('click'); };
@@ -1259,7 +1380,7 @@ function init() {
   eb.addEventListener('pointerdown', e => { const t = e.target.closest('.tile'); if (!t) return; ED.painting = true; edPaint(t); });
   eb.addEventListener('pointermove', e => { if (!ED.painting) return; const t = document.elementFromPoint(e.clientX, e.clientY)?.closest('#ed-board .tile'); if (t) edPaint(t); });
   window.addEventListener('pointerup', () => ED.painting = false);
-  renderStart(); sessionWatch();
+  renderStart(); renderCoins(); sessionWatch();
   const onResize = () => {
     sizeBoard(); ['A', 'B'].forEach(fitTools);
     if ($('#scr-duo').classList.contains('active')) duoFit();

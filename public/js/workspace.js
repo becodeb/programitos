@@ -324,7 +324,7 @@
       ws.innerHTML = html; fit(p, sc);
     }
     ['A', 'B'].forEach(p => new ResizeObserver(() => fit(p)).observe(wsEl(p)));
-    return { cancelAll, paint, fit, dragging: p => [...DRAG.values()].some(d => d.p === p && d.on) };
+    return { cancelAll, cancel: p => [...DRAG.values()].filter(d => d.p === p).forEach(d => end(d, null, true)), paint, fit, dragging: p => [...DRAG.values()].some(d => d.p === p && d.on) };
   };
 
   root.Workspace = WS;

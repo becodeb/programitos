@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
 <div class="sky">
@@ -40,6 +40,7 @@
   <header class="topbar">
     <button class="icon-btn" id="map-back" title="Inicio">🏠</button>
     <div class="tools">
+      <button class="icon-btn race-btn" id="btn-race" title="Carrera">🏁</button>
       <button class="icon-btn" id="btn-reset" title="Empezar de nuevo">🔄</button>
       <button class="icon-btn" id="btn-duo" title="Inventores: cada uno inventa un nivel">🎨</button>
       <button class="icon-btn" id="btn-workshop" title="Taller: inventar un nivel">🛠️</button>
@@ -137,6 +138,19 @@
   </div>
 </div>
 
+<!-- Carrera: tarjeta de 2 segundos entre rondas y final con las dos copas -->
+<div class="overlay" id="ov-round"><div class="card" id="round-body"></div></div>
+<div class="overlay" id="ov-race-end">
+  <div class="card">
+    <div class="race-cups"><div class="ch" id="race-A"></div><span class="trophy">🏆</span><span class="trophy">🏆</span><div class="ch" id="race-B"></div></div>
+    <div class="race-coins" id="race-coins"></div>
+    <div class="row-btns">
+      <button class="big-btn" id="race-again" title="Otra carrera">🏁</button>
+      <button class="big-btn alt" id="race-map" title="Mapa">🗺️</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-world">
   <div class="card">
     <div class="world-big" id="world-next"></div>
@@ -208,11 +222,12 @@
 
 <canvas id="confetti"></canvas>
 
-<script src="js/session.js?v=12"></script>
-<script src="js/engine.js?v=12"></script>
-<script src="js/levels.js?v=12"></script>
-<script src="js/levels2.js?v=12"></script>
-<script src="js/workspace.js?v=12"></script>
-<script src="js/game.js?v=12"></script>
+<script src="js/session.js?v=13"></script>
+<script src="js/engine.js?v=13"></script>
+<script src="js/race.js?v=13"></script>
+<script src="js/levels.js?v=13"></script>
+<script src="js/levels2.js?v=13"></script>
+<script src="js/workspace.js?v=13"></script>
+<script src="js/game.js?v=13"></script>
 </body>
 </html>
