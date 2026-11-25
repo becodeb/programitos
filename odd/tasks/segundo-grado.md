@@ -86,3 +86,4 @@ the stars (extra prize, never a penalty; the 3 stars do not depend on it).
 
 ## Progress / evidence
 (none yet)
+- Engram mirror pending: Engram does not resolve project programitos (ambiguous_project).
