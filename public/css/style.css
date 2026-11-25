@@ -411,7 +411,6 @@ body.g2 .map-wrap{gap:8px;padding-bottom:12px}
 .reset-pic .rp-arrow{font-size:44px}
 .big-btn.no{background:#e63946;box-shadow:0 6px 0 #a3202c}
 .big-btn.no:active{box-shadow:0 2px 0 #a3202c}
-#btn-skip.big-btn{background:var(--purple)}
 .t-grades{margin:0 0 8px}
 .t-grades .grade.on{background:var(--yellow)}
 @media (max-height:700px){

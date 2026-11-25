@@ -844,7 +844,6 @@ function fail(p, reason) {
     const face = $('#fail-face'); face.innerHTML = P[p].svg();
     face.classList.remove('bump'); void face.offsetWidth; face.classList.add('bump');
     $('#fail-why').textContent = why;
-    $('#btn-skip').hidden = !(S.fails >= 3 && !S.custom);        // ⏭️ después de 3 intentos que no salieron
     overlay('ov-fail'); Voice.say(say);
     if (S.fails >= 2) $('#btn-hint').classList.add('glow');
   }, 700);
@@ -905,14 +904,6 @@ function goNext() {
   if (next >= LEVELS.length) return finale();
   if (next % PER_WORLD === 0) return worldDone(worldOf(next));
   startLevel(next);
-}
-// ⏭️ Saltar: abre el siguiente nivel sin dar estrellas (ni monedas); sirve en todos los niveles, también 🤔 y 🐛
-function skipLevel() {
-  if (S.overlay !== 'ov-fail' || S.custom || !S.L) return;
-  ensureSession();
-  (S.save.skipped = S.save.skipped || {})[S.idx] = true;
-  S.save.unlocked = Math.max(S.save.unlocked, Math.min(S.idx + 1, LEVELS.length - 1));
-  save(); Snd.play('click'); overlay(null); goNext();
 }
 // Fin de mundo: festejo + cambian de lugar (cada chico prueba el otro personaje)
 function worldDone(w) {
@@ -1409,7 +1400,6 @@ function init() {
   $('#map-back').onclick = goStart;
   $('#btn-reset').onclick = openReset; $('#start-reset').onclick = openReset;
   $('#reset-yes').onclick = resetAll; $('#reset-no').onclick = () => { Snd.play('click'); overlay(null); };
-  $('#btn-skip').onclick = skipLevel;
   $('#btn-map').onclick = () => { if (S.race) return openMap(); if (S.running) return; S.custom && !S.duo ? openEditor() : openMap(); };
   $('#btn-race').onclick = () => { Snd.play('click'); startRace(); };
   $('#race-again').onclick = raceAgain; $('#race-map').onclick = openMap;
