@@ -185,6 +185,63 @@
     return pool[Math.floor(rnd() * pool.length)];
   }
 
-  root.Engine = { DIRS, MAX_ITER, BOX_KINDS, parse, count, flatten, parseMap, cellAt, blocked, variants, world, run, order, targetOf, play, pickVariant };
+  /* ---------- Pista: el camino de un chico ---------- */
+  // BFS sobre (casilla, puerta abierta): pisar el botón rojo abre las puertas. Devuelve { cells, open } (cells incluye el origen) o null.
+  function walk(m, from, to, open) {
+    const k = (x, y, o) => x + ',' + y + ',' + (o ? 1 : 0), prev = { [k(from.x, from.y, open)]: null }, q = [{ x: from.x, y: from.y, o: !!open }];
+    while (q.length) {
+      const c = q.shift();
+      if (c.x === to.x && c.y === to.y) {
+        const cells = []; let key = k(c.x, c.y, c.o);
+        while (key) { const [x, y] = key.split(',').map(Number); cells.unshift({ x, y }); key = prev[key]; }
+        return { cells, open: c.o };
+      }
+      for (const d of Object.values(DIRS)) {
+        const nx = c.x + d[0], ny = c.y + d[1];
+        if (blocked(m, nx, ny, c.o)) continue;
+        const no = c.o || m.pads.some(pd => pd.x === nx && pd.y === ny), key = k(nx, ny, no);
+        if (key in prev) continue;
+        prev[key] = k(c.x, c.y, c.o); q.push({ x: nx, y: ny, o: no });
+      }
+    }
+    return null;
+  }
+  // El camino de huellitas de p: en niveles de "juntá todas las estrellas" pasa por las estrellas que le tocan (y por los cofres),
+  // el que corre primero pisa el botón, y con casitas que se mueven va a la más lejana. { cells, marks } (marks = casillas con algo para juntar).
+  function route(L, p) {
+    const m = parseMap(L.map), first = L.first || 'A', other = p === 'A' ? 'B' : 'A';
+    const startOf = q => m.start[q], gated = q => q === first && m.pads.length > 0;
+    const dist = (q, t) => {                                   // largo del camino de q hasta t (con el botón si hace falta)
+      let best = Infinity; const o0 = !gated(q);
+      const a = walk(m, startOf(q), t, o0); if (a) best = a.cells.length;
+      if (gated(q)) { const b = walk(m, startOf(q), m.pads[0], false), c = b && walk(m, m.pads[0], t, true); if (c) best = Math.min(best, b.cells.length + c.cells.length); }
+      return best;
+    };
+    const wanted = [];
+    if (gated(p)) wanted.push({ ...m.pads[0], pad: true });
+    if (L.need) for (const t of m.stars.concat(m.boxes)) {
+      const mine = dist(p, t), theirs = dist(other, t);
+      if (mine < Infinity && (mine < theirs || (mine === theirs && p === first))) wanted.push(t);
+    }
+    let cur = { ...startOf(p) }, open = !gated(p), cells = [{ ...cur }];
+    const marks = [];
+    while (wanted.length) {
+      let best = null, bi = -1;
+      wanted.forEach((t, i) => { const w = walk(m, cur, t, open); if (w && (!best || w.cells.length < best.cells.length)) { best = w; bi = i; } });
+      if (!best) break;
+      cells = cells.concat(best.cells.slice(1)); open = best.open; cur = { ...best.cells[best.cells.length - 1] };
+      if (!wanted[bi].pad) marks.push({ x: cur.x, y: cur.y });
+      wanted.splice(bi, 1);
+    }
+    let end = null;                                            // casita: la más lejana si hay varias posibles
+    for (const h of homeCands(L, m, p)) {
+      if (!h) continue; const w = walk(m, cur, h, open);
+      if (w && (!end || w.cells.length > end.cells.length)) end = w;
+    }
+    if (end) cells = cells.concat(end.cells.slice(1));
+    return { cells, marks };
+  }
+
+  root.Engine = { walk, route,  DIRS, MAX_ITER, BOX_KINDS, parse, count, flatten, parseMap, cellAt, blocked, variants, world, run, order, targetOf, play, pickVariant };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.Engine;
 })(typeof window !== 'undefined' ? window : globalThis);

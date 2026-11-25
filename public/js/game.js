@@ -109,12 +109,42 @@ const P = {
   B: { name: 'Lula', color: '#ff8cc6', dark: '#c93a82', svg: lulaSVG }
 };
 
-/* ---------- Guardado ---------- */
+/* ---------- Guardado y sesión de la clase ---------- */
+// El progreso vence a los 45 minutos de que la pareja empieza (ver session.js). El reloj se puede correr
+// desde afuera con window.__skew (milisegundos) para probar sin esperar.
+const clockNow = () => Date.now() + (window.__skew || 0);
+const SESS = Session.create({ storage: (() => { try { return window.localStorage; } catch (e) { return null; } })(), now: clockNow });
+function prefs() { const p = SESS.getPrefs() || {}; return { sound: p.sound !== false, voice: p.voice !== false }; }
+function freshSave() { return Object.assign({ unlocked: 0, stars: {}, gems: {}, skipped: {}, custom: null }, prefs()); }
 function load() {
-  try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); if (d && d.stars) { if (GRADE === 2 && !d.gems) d.gems = {}; return d; } } catch (e) {}
-  return { unlocked: 0, stars: {}, gems: {}, sound: true, voice: true, custom: null };
+  try {
+    const d = JSON.parse(SESS.get(SAVE_KEY));
+    if (d && d.stars) { d.gems = d.gems || {}; d.skipped = d.skipped || {}; return Object.assign(d, prefs()); }
+  } catch (e) {}
+  return freshSave();
 }
-function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S.save)); } catch (e) {} }
+function save() { if (SESS.state().status === 'none') SESS.start(); try { SESS.set(SAVE_KEY, JSON.stringify(S.save)); } catch (e) {} SESS.touch(); }
+function savePrefs() { SESS.setPrefs({ sound: S.save.sound, voice: S.save.voice }); }
+// ¿Hay algo ganado en la memoria de esta pestaña? (para no "resucitar" lo que otra pestaña borró)
+function memProgress() { return Session.isProgress(JSON.stringify(S.save)) || Session.isProgress(JSON.stringify(PF)); }
+function resetMemory() { S.save = freshSave(); resetPF(); }
+// Monedas y ropero: por personaje (Tito y Lula), compartidos entre 1.º y 2.º. Se borran con el resto del progreso.
+const PF_KEY = 'programitos-pf';
+const freshPF = () => ({ coins: { A: 0, B: 0 }, owned: { A: [], B: [] }, wear: { A: {}, B: {} } });
+function loadPF() {
+  try { const d = JSON.parse(SESS.get(PF_KEY)); if (d && d.coins && d.owned && d.wear) return d; } catch (e) {}
+  return freshPF();
+}
+let PF = loadPF();
+function savePF() { if (SESS.state().status === 'none') SESS.start(); try { SESS.set(PF_KEY, JSON.stringify(PF)); } catch (e) {} SESS.touch(); }
+function resetPF() { PF = freshPF(); }
+// Se llama ANTES de sumar algo al progreso: si no hay sesión se arranca una (y lo de memoria que ya no existe en disco se descarta).
+// Si está vencida pero la pareja sigue jugando, no se toca: se borra recién al volver al inicio o con el reloj parado.
+function ensureSession() {
+  const s = SESS.state();
+  if (s.status === 'none') { if (memProgress()) resetMemory(); SESS.start(); }
+  return s.status;
+}
 
 /* ---------- Sonido (sintetizado) ---------- */
 const Snd = {
@@ -192,6 +222,8 @@ if (window.speechSynthesis) { Voice.pick(); speechSynthesis.onvoiceschanged = ()
 
 /* ---------- Estado ---------- */
 applyGrade(readGrade());
+if (SESS.state().status === 'expired') SESS.wipe();     // una compu que pasa de una clase a otra arranca sin progreso viejo
+PF = loadPF();
 const S = {
   save: load(), idx: 0, L: null, custom: false, grid: null, cols: 0, rows: 0,
   prog: { A: [], B: [] }, loose: { A: [], B: [] }, ready: { A: false, B: false }, pick: { A: null, B: null }, running: false,
@@ -204,7 +236,7 @@ const countOf = p => S.prog[p].reduce((s, it) => s + (it.t === 'rep' ? 1 + it.bo
 const stepMs = () => S.fast ? 300 : 520;
 const worldOf = i => Math.floor(i / PER_WORLD);
 // Los mundos desde FREE_FROM (1.º: el arroyo) están abiertos desde el principio: avanzan solos con las estrellas
-const lvOpen = i => i <= S.save.unlocked || (worldOf(i) >= FREE_FROM && (i % PER_WORLD === 0 || !!S.save.stars[i - 1]));
+const lvOpen = i => i <= S.save.unlocked || (worldOf(i) >= FREE_FROM && (i % PER_WORLD === 0 || !!S.save.stars[i - 1] || !!(S.save.skipped || {})[i - 1]));
 const workshopOpen = () => S.save.unlocked >= 2 * PER_WORLD;
 
 const parseProg = Engine.parse;
@@ -226,6 +258,35 @@ function initStart() {
   $$('[data-grade]').forEach(b => b.onclick = () => { Snd.play('click'); switchGrade(+b.dataset.grade); });
   markGrade();
 }
+// El reloj de la clase arranca cuando los dos se suman; si ya hay una sesión viva no se alarga, se sigue donde estaban
+function beginSession() {
+  const st = SESS.state().status;
+  if (st === 'expired') { SESS.wipe(); resetMemory(); }
+  else ensureSession();
+  SESS.start();
+}
+// Volver al inicio: acá se borra lo vencido, y también lo que otra pestaña borró (no se resucita desde la memoria)
+function goStart() {
+  overlay(null); Voice.stop();
+  const st = SESS.state().status;
+  if (st === 'expired') { SESS.wipe(); resetMemory(); }
+  else if (st === 'none' && memProgress()) resetMemory();
+  S.L = null; S.duo = null; S.joined = { A: false, B: false }; $$('.join').forEach(b => b.classList.remove('on'));
+  document.body.className = GRADE === 2 ? 'g2' : '';
+  show('scr-start'); renderStart();
+}
+// Resumen en vivo del progreso (de los dos grados) y botón 🔄 que solo aparece si hay algo para borrar
+function starsOf(key) { try { const d = JSON.parse(SESS.get(key)); return Object.values((d && d.stars) || {}).reduce((a, b) => a + b, 0); } catch (e) { return 0; } }
+function renderStart() {
+  const has = SESS.hasProgress(), box = $('#start-prog');
+  box.hidden = !has;
+  if (has) box.querySelector('.sp-stars').textContent = '⭐ ' + (starsOf('programitos-v2') + starsOf('programitos-v2-g2'));
+}
+function openReset() { Snd.play('click'); overlay('ov-reset'); Voice.say('¿Empezar de nuevo? Se borran las estrellas.'); }
+function resetAll() {
+  SESS.wipe(); resetMemory(); S.L = null; Snd.play('del');
+  goStart();
+}
 function markGrade() { $$('[data-grade]').forEach(b => b.classList.toggle('on', +b.dataset.grade === GRADE)); }
 // Cambiar de grado: otros niveles y otro guardado. El guardado del grado anterior no se toca.
 function switchGrade(n) {
@@ -234,7 +295,7 @@ function switchGrade(n) {
   const { sound, voice } = S.save;
   applyGrade(n); S.save = load(); S.save.sound = sound; S.save.voice = voice;   // sonido y voz se mantienen
   S.L = null; S.duo = null;
-  markGrade(); syncToggles();
+  markGrade(); syncToggles(); renderStart();
 }
 function join(p) {
   if (S.joined.A && S.joined.B) return;
@@ -244,12 +305,13 @@ function join(p) {
   if (S.joined.A && S.joined.B) {
     Snd.play('clap'); confetti(60);
     Voice.say('¡Hola Tito y Lula! ¡A programar juntos!');
-    setTimeout(() => { S.joined = { A: false, B: false }; $$('.join').forEach(b => b.classList.remove('on')); GRADE === 2 ? openMap() : openDuo(); }, 900);
+    setTimeout(() => { S.joined = { A: false, B: false }; $$('.join').forEach(b => b.classList.remove('on')); beginSession(); openMap(); }, 900);
   } else if (S.joined[p]) Voice.say(p === 'A' ? '¡Hola Tito! ¿Y Lula?' : '¡Hola Lula! ¿Y Tito?');
 }
 
 /* ---------- Mapa ---------- */
 function openMap() {
+  if (SESS.state().status === 'none' && memProgress()) resetMemory();      // otra pestaña borró el progreso
   overlay(null); show('scr-map'); Voice.stop(); setWorld(Math.min(WORLDS.length - 1, worldOf(S.save.unlocked))); S.duo = null;
   const box = $('#levels'); box.innerHTML = '';
   WORLDS.forEach((W, w) => {
@@ -514,8 +576,8 @@ function unready(p) {
 
 /* ---------- Nivel ---------- */
 function startLevel(i, customL) {
-  if (!customL) S.duo = null;
-  S.custom = !!customL; S.idx = i; S.L = customL || LEVELS[i]; S.fails = 0;
+  if (!customL) { S.duo = null; ensureSession(); }
+  S.custom = !!customL; S.idx = i; S.L = customL || LEVELS[i]; S.fails = 0; S.ran = false;
   S.prog = { A: parseProg(S.L.pre?.A), B: parseProg(S.L.pre?.B) }; S.loose = { A: [], B: [] };
   S.ready = { A: false, B: false }; S.pick = { A: null, B: null };
   S.tuto = !S.custom && TUTO[i] ? { A: [...TUTO[i]], B: [...TUTO[i]] } : null;
@@ -645,7 +707,8 @@ async function run() {
   $$('.panel').forEach(p => p.classList.add('locked'));
   // La variante la elige el motor: si algún programa falla en alguna, juega esa (así no se gana de casualidad)
   S.W = Engine.world(S.L, Engine.pickVariant(S.L, S.prog, { pick: S.pick }));
-  await countdown();
+  await countdown(S.ran);                  // 3-2-1 solo la primera vez; al reintentar, un "¡YA!" cortito
+  S.ran = true;
   await shuffleHouses();
   $('#board').style.setProperty('--step', (stepMs() * .85) / 1000 + 's');
   for (const p of Engine.order(S.L)) {
@@ -659,9 +722,9 @@ async function run() {
   if (S.L.need && S.W.total && S.W.got < S.W.total) return fail('A', 'stars');
   win();
 }
-async function countdown() {
+async function countdown(short) {
   overlay('ov-count'); const n = $('#count-num');
-  for (const t of ['3', '2', '1', '¡YA!']) {
+  for (const t of short ? ['¡YA!'] : ['3', '2', '1', '¡YA!']) {
     n.textContent = t; n.classList.remove('go'); void n.offsetWidth; n.classList.add('go');
     Snd.play(t === '¡YA!' ? 'go' : 'tick');
     await sleep(t === '¡YA!' ? 450 : 550);
@@ -754,6 +817,7 @@ function fail(p, reason) {
     const face = $('#fail-face'); face.innerHTML = P[p].svg();
     face.classList.remove('bump'); void face.offsetWidth; face.classList.add('bump');
     $('#fail-why').textContent = why;
+    $('#btn-skip').hidden = !(S.fails >= 3 && !S.custom);        // ⏭️ después de 3 intentos que no salieron
     overlay('ov-fail'); Voice.say(say);
     if (S.fails >= 2) $('#btn-hint').classList.add('glow');
   }, 700);
@@ -771,6 +835,7 @@ async function win() {
   // 💎: premio extra por usar pocos bloques (nunca resta; las estrellas no dependen de esto)
   const par = !isPredict() && !S.custom && S.L.par, gem = !!par && countOf('A') <= par.A && countOf('B') <= par.B;
   if (!S.custom) {
+    ensureSession();
     S.save.stars[S.idx] = Math.max(S.save.stars[S.idx] || 0, rating);
     if (gem) (S.save.gems = S.save.gems || {})[S.idx] = true;
     if (worldOf(S.idx) < FREE_FROM) S.save.unlocked = Math.max(S.save.unlocked, Math.min(S.idx + 1, LEVELS.length - 1));
@@ -800,11 +865,23 @@ function highFive(p) {
       return openMap();
     }
     if (S.custom) return openEditor();
-    const next = S.idx + 1;
-    if (next >= LEVELS.length) return finale();
-    if (next % PER_WORLD === 0) return worldDone(worldOf(next));
-    startLevel(next);
+    goNext();
   }, 800);
+}
+// Lo que viene después de un nivel (ganado o saltado): el siguiente, el festejo del mundo o el final
+function goNext() {
+  const next = S.idx + 1;
+  if (next >= LEVELS.length) return finale();
+  if (next % PER_WORLD === 0) return worldDone(worldOf(next));
+  startLevel(next);
+}
+// ⏭️ Saltar: abre el siguiente nivel sin dar estrellas (ni monedas); sirve en todos los niveles, también 🤔 y 🐛
+function skipLevel() {
+  if (S.overlay !== 'ov-fail' || S.custom || !S.L) return;
+  ensureSession();
+  (S.save.skipped = S.save.skipped || {})[S.idx] = true;
+  S.save.unlocked = Math.max(S.save.unlocked, Math.min(S.idx + 1, LEVELS.length - 1));
+  save(); Snd.play('click'); overlay(null); goNext();
 }
 // Fin de mundo: festejo + cambian de lugar (cada chico prueba el otro personaje)
 function worldDone(w) {
@@ -849,26 +926,33 @@ function hint() {
   if (S.running || S.overlay) return;
   Snd.play('star'); $('#btn-hint').classList.remove('glow');
   $$('#board .foot').forEach(f => f.remove());
-  const first = S.L.first || 'A';
   for (const p of ['A', 'B']) {
-    let path;
+    let path, skip = new Set();
     if (isPredict()) {
       path = [S.start[p]]; let { x, y } = S.start[p];
       for (const st of Engine.flatten(parseProg(S.L.pre[p]))) if (DIRS[st.d]) { x += DIRS[st.d][0]; y += DIRS[st.d][1]; path.push({ x, y }); }
       path.push({});
-    } else if (p === first && S.pads.length) {
-      path = bfs(S.start[p], S.pads[0], false).concat(bfs(S.pads[0], S.homes[p], false).slice(1));
-    } else path = bfs(S.start[p], S.homes[p], true);
-    path.slice(1, -1).forEach(c => {
-      const f = document.createElement('div'); f.className = 'ent foot';
-      f.style.setProperty('--x', c.x); f.style.setProperty('--y', c.y);
-      f.textContent = p === 'A' ? '👣' : '🐾';
-      $('#board').appendChild(f);
-    });
+    } else {
+      // Camino de verdad: pasa por las estrellas y los cofres que le tocan, el botón en orden y la casita más lejana
+      const r = Engine.route(S.L, p); path = r.cells;
+      [...S.stars, ...S.boxes, ...S.pads].forEach(t => skip.add(key(t.x, t.y)));
+    }
+    footprints(p, path.slice(1, -1), skip);
   }
   setBubble('👣 🐾');
   Voice.say('¡Sigan las huellitas y cuenten los pasos!');
   setTimeout(() => $$('#board .foot').forEach(f => f.remove()), 6000);
+}
+// Huellitas: una por casilla (sin tapar estrellas, cofres ni botones, que ya se ven)
+function footprints(p, cells, skip) {
+  const done = new Set();
+  cells.forEach(c => {
+    const k = key(c.x, c.y); if (done.has(k) || (skip && skip.has(k))) return; done.add(k);
+    const f = document.createElement('div'); f.className = 'ent foot'; f.dataset.p = p;
+    f.style.setProperty('--x', c.x); f.style.setProperty('--y', c.y);
+    f.textContent = p === 'A' ? '👣' : '🐾';
+    $('#board').appendChild(f);
+  });
 }
 
 /* ---------- Taller: inventar niveles ---------- */
@@ -1063,11 +1147,16 @@ function openTeacher() {
   $('#teacher-lock').hidden = false; $('#teacher-panel').hidden = true;
   overlay('ov-teacher'); setTimeout(() => $('#t-ans').focus(), 100);
 }
+// Panel del docente: el selector 1°/2° y la lista de niveles del grado elegido
+function renderTeacher() {
+  $('#t-levels').innerHTML = LEVELS.map((_, i) => `<button data-go="${i}">${i + 1}</button>`).join('');
+  $$('[data-tgrade]').forEach(b => b.classList.toggle('on', +b.dataset.tgrade === GRADE));
+  syncToggles();
+}
 function checkTeacher() {
   if (+$('#t-ans').value === tAns) {
     $('#teacher-lock').hidden = true; $('#teacher-panel').hidden = false;
-    $('#t-levels').innerHTML = LEVELS.map((_, i) => `<button data-go="${i}">${i + 1}</button>`).join('');
-    syncToggles();
+    renderTeacher();
   } else { const i = $('#t-ans'); i.classList.add('bad'); setTimeout(() => i.classList.remove('bad'), 500); }
 }
 
@@ -1092,6 +1181,41 @@ document.addEventListener('keydown', e => {
   if (pA) act('A', pA); else if (pB) act('B', pB);
 });
 
+/* ---------- Vigilante de la sesión: reloj parado y pantalla dormida ---------- */
+// Vencida + 3 minutos sin tocar nada (o la compu volvió de dormida/oculta tras 3+ minutos) = otra clase: se borra y vuelve el inicio.
+// Nunca en medio de una corrida, de un arrastre ni mientras alguien toca (el tiempo "sin tocar" se mide con reloj propio, no con el de la sesión).
+const Idle = { last: performance.now(), tick: clockNow(), hiddenAt: 0, ms: 3 * 60 * 1000, sleepMs: 3 * 60 * 1000, recent: 20000 };
+const quiet = () => !S.running && !(WS && ['A', 'B'].some(p => WS.dragging(p))) && !(S.race && (S.race.busy.A || S.race.busy.B));
+function endClass() {
+  Idle.last = performance.now(); Idle.tick = clockNow();
+  goStart();
+}
+function sessionTick() {
+  const t = clockNow(), jump = t - Idle.tick; Idle.tick = t;
+  if (SESS.state().status !== 'expired') { SESS.touch(); return; }
+  if (!quiet() || S.overlay === 'ov-count') return;
+  const still = performance.now() - Idle.last;
+  if (still >= Idle.ms || (jump >= Idle.sleepMs && still >= Idle.recent)) endClass();
+}
+function sessionWatch() {
+  const touched = () => { Idle.last = performance.now(); };
+  ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'wheel'].forEach(n => addEventListener(n, touched, { capture: true, passive: true }));
+  setInterval(sessionTick, 15000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { Idle.hiddenAt = clockNow(); return; }
+    if (clockNow() - Idle.hiddenAt >= Idle.sleepMs && SESS.state().status === 'expired' && quiet()) endClass();
+    Idle.tick = clockNow();
+  });
+  // Otra pestaña borró el progreso (🔄, vencimiento): esta no lo resucita desde su memoria
+  addEventListener('storage', e => {
+    if (e.key !== null && !Session.PROGRESS_KEYS.concat(Session.SESSION_KEY).includes(e.key)) return;
+    if (SESS.state().status === 'none' && memProgress()) {
+      resetMemory();
+      if ($('#scr-map').classList.contains('active')) openMap(); else if ($('#scr-start').classList.contains('active')) renderStart();
+    }
+  });
+}
+
 /* ---------- Arranque ---------- */
 function syncToggles() {
   $$('.snd-toggle').forEach(b => { b.textContent = S.save.sound ? '🔊' : '🔇'; b.classList.toggle('off', !S.save.sound); });
@@ -1101,13 +1225,16 @@ function syncToggles() {
 function init() {
   initStart(); buildPanel('A'); buildPanel('B'); attachWorkspace(); syncToggles();
   document.addEventListener('pointerdown', () => Snd.init(), { once: true });
-  $('#map-back').onclick = () => show('scr-start');
+  $('#map-back').onclick = goStart;
+  $('#btn-reset').onclick = openReset; $('#start-reset').onclick = openReset;
+  $('#reset-yes').onclick = resetAll; $('#reset-no').onclick = () => { Snd.play('click'); overlay(null); };
+  $('#btn-skip').onclick = skipLevel;
   $('#btn-map').onclick = () => { if (S.running) return; S.custom && !S.duo ? openEditor() : openMap(); };
   $('#btn-hint').onclick = hint;
   $('#btn-say').onclick = () => Voice.say(S.L?.say || $('#bubble-text').textContent);
   $('#btn-speed').onclick = () => { S.fast = !S.fast; syncToggles(); Snd.play('click'); };
-  $$('.snd-toggle').forEach(b => b.onclick = () => { S.save.sound = !S.save.sound; save(); syncToggles(); Snd.play('click'); });
-  $('#t-voice').onclick = () => { S.save.voice = !S.save.voice; save(); syncToggles(); if (S.save.voice) Voice.say('¡Hola!'); else Voice.stop(); };
+  $$('.snd-toggle').forEach(b => b.onclick = () => { S.save.sound = !S.save.sound; savePrefs(); syncToggles(); Snd.play('click'); });
+  $('#t-voice').onclick = () => { S.save.voice = !S.save.voice; savePrefs(); syncToggles(); if (S.save.voice) Voice.say('¡Hola!'); else Voice.stop(); };
   $('#btn-full').onclick = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.(); };
   $('#btn-retry').onclick = retry;
   $$('[data-hf]').forEach(b => b.onclick = () => highFive(b.dataset.hf));
@@ -1122,15 +1249,17 @@ function init() {
   $('#ed-back').onclick = openMap;
   $('#btn-teacher').onclick = openTeacher;
   $('#t-ok').onclick = checkTeacher;
-  $('#t-unlock').onclick = () => { S.save.unlocked = LEVELS.length - 1; save(); openMap(); };
-  $('#t-reset').onclick = () => { S.save.unlocked = 0; S.save.stars = {}; save(); openMap(); };
+  $('#t-unlock').onclick = () => { ensureSession(); S.save.unlocked = LEVELS.length - 1; save(); openMap(); };
+  $('#t-reset').onclick = resetAll;
   $('#t-levels').onclick = e => { const b = e.target.closest('[data-go]'); if (b) startLevel(+b.dataset.go); };
+  $$('[data-tgrade]').forEach(b => b.onclick = () => { Snd.play('click'); switchGrade(+b.dataset.tgrade); renderTeacher(); if ($('#scr-map').classList.contains('active')) openMap(); overlay('ov-teacher'); });
   $$('[data-close]').forEach(b => b.onclick = () => overlay(null));
   // Taller: tocar o arrastrar para pintar
   const eb = $('#ed-board');
   eb.addEventListener('pointerdown', e => { const t = e.target.closest('.tile'); if (!t) return; ED.painting = true; edPaint(t); });
   eb.addEventListener('pointermove', e => { if (!ED.painting) return; const t = document.elementFromPoint(e.clientX, e.clientY)?.closest('#ed-board .tile'); if (t) edPaint(t); });
   window.addEventListener('pointerup', () => ED.painting = false);
+  renderStart(); sessionWatch();
   const onResize = () => {
     sizeBoard(); ['A', 'B'].forEach(fitTools);
     if ($('#scr-duo').classList.contains('active')) duoFit();

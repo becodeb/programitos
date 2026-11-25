@@ -71,7 +71,9 @@ body.w3 .cloud,body.x2 .cloud,body.x4 .cloud{display:none}
 .key{position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);font-size:12px;background:#fff;color:var(--ink);border-radius:8px;padding:1px 7px;box-shadow:0 2px 0 rgba(0,0,0,.2);font-weight:600;opacity:.75;white-space:nowrap}
 
 /* ---------- Mapa ---------- */
-.map-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:4px 16px 16px;min-height:0;max-width:1000px;width:100%;margin:0 auto}
+.map-wrap{flex:1;display:flex;flex-direction:column;gap:10px;padding:4px 16px 16px;min-height:0;max-width:1000px;width:100%;margin:0 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.map-wrap::before,.map-wrap::after{content:"";flex:1 0 0}   /* centra si sobra lugar; si falta, hay scroll sin cortar lo de arriba */
+.world{flex:0 0 auto}
 .world{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.55);border-radius:26px;padding:8px}
 .world.locked{opacity:.55}
 .w-ico{font-size:clamp(34px,5vh,50px);width:clamp(54px,8vh,74px);text-align:center;flex:0 0 auto}
@@ -399,3 +401,30 @@ body.x5{--g0:#e3b58c;--g1:#d6a479;--water:#ff7a3c;--frame:#7a3b2e;--frame2:#4e24
 /* 6 mundos en el mapa: filas un poco más bajas para que entren con la barra de arriba en 1024x600 */
 body.g2 .lv{height:clamp(44px,10vh,92px)}
 body.g2 .map-wrap{gap:8px;padding-bottom:12px}
+
+/* ---------- Progreso de la clase: inicio con resumen, 🔄 y confirmación ---------- */
+.start-prog{display:flex;align-items:center;gap:12px;margin-top:22px;background:#fff;border-radius:30px;padding:6px 8px 6px 18px;box-shadow:0 4px 0 rgba(0,0,0,.12);font-size:26px;font-weight:700}
+.start-prog .sp-coins{display:flex;gap:10px}
+#scr-start .grades{margin-bottom:10px}
+.reset-pic{display:flex;align-items:center;justify-content:center;gap:12px;font-size:56px;line-height:1;margin:6px 0 16px}
+.reset-pic .rp-bin{font-size:84px}
+.reset-pic .rp-arrow{font-size:44px}
+.big-btn.no{background:#e63946;box-shadow:0 6px 0 #a3202c}
+.big-btn.no:active{box-shadow:0 2px 0 #a3202c}
+#btn-skip.big-btn{background:var(--purple)}
+.t-grades{margin:0 0 8px}
+.t-grades .grade.on{background:var(--yellow)}
+@media (max-height:700px){
+  #scr-start .logo{font-size:clamp(40px,12vh,70px);margin-bottom:4px}
+  .join{width:clamp(130px,min(26vw,36vh),260px);padding:12px}
+  .start-prog{margin-top:14px;font-size:22px}
+}
+@media (max-height:700px){
+  .world{padding:5px 8px}
+  .map-wrap{gap:6px;padding-bottom:8px}
+  .lv{height:46px;border-radius:16px}
+  .lv .n{font-size:24px}.lv .st{font-size:11px;margin-top:2px}
+  .w-ico{font-size:30px;width:50px}
+  body.g2 .lv{height:clamp(44px,10vh,92px)}
+  body.g2 .lv .n{font-size:28px}
+}

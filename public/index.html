@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Programitos · ¡Programá con un amigo!</title>
-<meta name="description" content="Juego de programación secuencial para jugar de a dos. Para chicos de 1er grado.">
+<meta name="description" content="Juego de programación secuencial para jugar de a dos. Para chicos de 1.º y 2.º grado.">
 <meta name="theme-color" content="#7fd3ff">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
 <div class="sky">
@@ -28,6 +28,11 @@
     <div class="plus">+</div>
     <button class="join join-B" data-join="B"><span class="ok">✅</span><span class="key">Enter</span></button>
   </div>
+  <!-- Progreso en vivo de esta clase: sumarse sigue donde estaban. 🔄 empieza de nuevo -->
+  <div class="start-prog" id="start-prog" hidden>
+    <span class="sp-stars">⭐ 0</span><span class="sp-coins" id="sp-coins"></span>
+    <button class="icon-btn small" id="start-reset" title="Empezar de nuevo">🔄</button>
+  </div>
 </section>
 
 <!-- MAPA -->
@@ -35,6 +40,7 @@
   <header class="topbar">
     <button class="icon-btn" id="map-back" title="Inicio">🏠</button>
     <div class="tools">
+      <button class="icon-btn" id="btn-reset" title="Empezar de nuevo">🔄</button>
       <button class="icon-btn" id="btn-duo" title="Inventores: cada uno inventa un nivel">🎨</button>
       <button class="icon-btn" id="btn-workshop" title="Taller: inventar un nivel">🛠️</button>
       <button class="icon-btn" id="btn-album" title="Álbum de figuritas">📒</button>
@@ -101,7 +107,21 @@
   <div class="card">
     <div class="fail-face" id="fail-face"></div>
     <div class="fail-why" id="fail-why"></div>
-    <button class="big-btn" id="btn-retry">🔄</button>
+    <div class="row-btns">
+      <button class="big-btn" id="btn-retry">🔄</button>
+      <button class="big-btn alt" id="btn-skip" title="Saltar este nivel" hidden>⏭️</button>
+    </div>
+  </div>
+</div>
+
+<!-- Empezar de nuevo: dibujo de estrellas que van al tacho; ✅ borra, ❌ vuelve -->
+<div class="overlay" id="ov-reset">
+  <div class="card">
+    <div class="reset-pic"><span>⭐⭐⭐</span><span class="rp-arrow">➡️</span><span class="rp-bin">🗑️</span></div>
+    <div class="row-btns">
+      <button class="big-btn" id="reset-yes" title="Sí, empezar de nuevo">✅</button>
+      <button class="big-btn no" id="reset-no" title="No">❌</button>
+    </div>
   </div>
 </div>
 
@@ -160,24 +180,26 @@
       </div>
     </div>
     <div id="teacher-panel" hidden>
+      <div class="row-btns t-grades">
+        <button class="grade" data-tgrade="1">1°</button><button class="grade" data-tgrade="2">2°</button>
+      </div>
       <div class="row-btns">
         <button class="big-btn txt" id="t-unlock">🔓 Desbloquear todo</button>
-        <button class="big-btn alt txt" id="t-reset">♻️ Borrar progreso</button>
+        <button class="big-btn alt txt" id="t-reset">♻️ Borrar todo el progreso</button>
         <button class="big-btn alt txt" id="t-voice">🗣️ Voz: sí</button>
       </div>
       <h3>Ir a un nivel</h3>
       <div class="t-levels" id="t-levels"></div>
       <h3>Cómo se juega</h3>
       <ul class="t-help">
-        <li>Juegan <b>dos chicos por compu</b>: uno maneja a Tito (izquierda) y el otro a Lula (derecha). El programa corre cuando <b>los dos</b> aprietan el botón ▶.</li>
-        <li>8 mundos de 6 niveles: 🌳 secuencias · 🏖️ giros · ⛄ trabajo en equipo (uno abre la puerta del otro) · 🚀 bloque <b>repetir</b> · 🐸 🦆 bloque <b>recoger</b> 🧺 (hay que pararse sobre la estrella y usarlo para juntarla; estos dos mundos están abiertos desde el principio).</li>
-        <li>El programa es un <b>área de trabajo</b> como la de Scratch: los bloques se <b>arrastran</b> con el dedo o el mouse y se encastran debajo del ▶, de otro bloque o adentro de un 🔁. Arrastrar un bloque se lleva también los que tiene debajo. Si se sueltan lejos de todo quedan <b>sueltos y apagados</b> (no corren ni cuentan); soltarlos sobre las herramientas los borra. Tocar una herramienta también agrega.</li>
-        <li>Niveles 🤔: los programas vienen armados y hay que <b>predecir</b> en qué fruta terminan. Niveles 🐛: hay que <b>encontrar y arreglar</b> el error.</li>
-        <li>Al terminar cada mundo, el juego pide que <b>cambien de lugar</b> (quien era Tito pasa a ser Lula).</li>
-        <li>🛠️ Taller (se habilita al terminar la playa): las parejas inventan su propio nivel y lo juegan. Ideal para quienes terminan antes.</li>
-        <li>Tocar un bloque del programa no hace nada: para sacarlo se arrastra afuera; ⌫ borra el último; 🗑️ borra todo. Tocar el número del 🔁 cambia cuántas veces repite. 💡 muestra huellitas del camino.</li>
-        <li>Teclado Tito: <b>W A S D</b>, <b>R</b> repetir, <b>Q</b> borrar, <b>E</b> listo · Lula: <b>flechas</b>, <b>Shift der.</b> repetir, <b>Backspace</b> borrar, <b>Enter</b> listo.</li>
-        <li>El progreso se guarda en esta compu.</li>
+        <li>Juegan <b>dos chicos por compu</b>: Tito (izquierda) y Lula (derecha). Cada uno arma su programa; en los niveles el programa corre cuando <b>los dos</b> aprietan ▶.</li>
+        <li><b>1°</b>: 8 mundos de 6 niveles (secuencias, giros, trabajo en equipo, <b>repetir</b> y <b>recoger</b> 🧺). <b>2°</b>: 6 mundos: repetir con pocos bloques, <b>repetir hasta la casita</b> 🔁🏠, <b>si hay estrella</b> 👀⭐ y <b>si hay fantasma</b> 👀👻, cofres 🎁 y casitas que se mueven. El 💎 premia usar pocos bloques.</li>
+        <li>Los bloques se <b>arrastran</b> (o se tocan en la paleta) y se encastran debajo del ▶ o dentro de un 🔁; soltarlos fuera de la paleta los borra. ⌫ borra el último, 🗑️ todo. Niveles 🤔: predecir la fruta. Niveles 🐛: arreglar el error.</li>
+        <li>💡 muestra las huellitas del camino (en los niveles de juntar estrellas, pasa por ellas). Si un nivel no sale después de 3 intentos aparece ⏭️ para saltarlo (sin estrellas).</li>
+        <li>🏁 <b>Carrera</b> (en el mapa): cada uno corre por su cuenta con su ▶, 5 rondas, gana monedas 🪙. 👕 <b>Ropero</b>: con las monedas cada uno viste a su personaje.</li>
+        <li><b>El progreso dura una clase</b>: se guarda en esta compu y vence a los <b>45 minutos</b> de que los dos se suman (recargar no lo borra). Vencido, se borra al volver al inicio o cuando nadie toca nada 3 minutos. 🔄 lo borra a mano, con confirmación.</li>
+        <li>Teclado Tito: <b>W A S D</b>, <b>R</b> repetir, <b>T</b> hasta la casita, <b>F</b> recoger, <b>G</b>/<b>V</b> si-estrella/si-fantasma, <b>Z X</b> menos/más veces, <b>Q</b> borrar, <b>E</b> listo (▶). Lula: <b>flechas</b>, <b>Shift der.</b> repetir, <b>P</b> hasta la casita, <b>Ctrl der.</b> recoger, <b>L</b>/<b>K</b>, <b>, .</b> menos/más veces, <b>Backspace</b> borrar, <b>Enter</b> listo (▶).</li>
+        <li>🛠️ Taller (se abre al terminar la playa de 1°) y 🎨 Inventores: las parejas inventan niveles. Ideal para quienes terminan antes.</li>
       </ul>
       <button class="big-btn alt txt" data-close="ov-teacher">Cerrar</button>
     </div>
@@ -186,10 +208,11 @@
 
 <canvas id="confetti"></canvas>
 
-<script src="js/engine.js?v=11"></script>
-<script src="js/levels.js?v=11"></script>
-<script src="js/levels2.js?v=11"></script>
-<script src="js/workspace.js?v=11"></script>
-<script src="js/game.js?v=11"></script>
+<script src="js/session.js?v=12"></script>
+<script src="js/engine.js?v=12"></script>
+<script src="js/levels.js?v=12"></script>
+<script src="js/levels2.js?v=12"></script>
+<script src="js/workspace.js?v=12"></script>
+<script src="js/game.js?v=12"></script>
 </body>
 </html>
