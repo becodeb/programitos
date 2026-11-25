@@ -106,9 +106,9 @@ Computers move from one class to the next (classes last ~50 min), so a new pair 
 - Teacher panel: 1°/2° switch, updated help (blocks, keys, race, wardrobe). README updated. Cache version bump.
 
 ## Tasks
-- [ ] T1 Pure engine + level checker + grade selection (delegated)
-- [ ] T2 New blocks, boxes, moving house (delegated)
-- [ ] T3 36 second-grade levels, gem (delegated)
+- [x] T1 Pure engine + level checker + grade selection (delegated)
+- [x] T2 New blocks, boxes, moving house (delegated)
+- [x] T3 36 second-grade levels, gem (delegated)
 - [ ] T3b Scratch-like drag workspace, added on user request (delegated, after T3)
 - [ ] T4 Race mode (delegated)
 - [ ] T5 Coins and wardrobe (delegated)
@@ -119,5 +119,7 @@ Computers move from one class to the next (classes last ~50 min), so a new pair 
 `node tools/check-levels.mjs` passes; browser script plays every 2nd-grade level and 1st-grade smoke with no console errors.
 
 ## Progress / evidence
-(none yet)
+- T1–T3 (delegated, a17ec69 + dd70773): `node tools/check-levels.mjs` re-run by parent: ok, 48 + 36 levels, 1312 asserts.
+  Writer's browser run: all 36 second-grade levels won in the real UI, 0 console errors. Extra box kind `dark`
+  (ghost or nothing). Screenshots on the Pi lack an emoji font, so icon look is unverified there.
 - Engram mirror pending: Engram does not resolve project programitos (ambiguous_project).
