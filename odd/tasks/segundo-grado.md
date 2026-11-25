@@ -109,7 +109,7 @@ Computers move from one class to the next (classes last ~50 min), so a new pair 
 - [x] T1 Pure engine + level checker + grade selection (delegated)
 - [x] T2 New blocks, boxes, moving house (delegated)
 - [x] T3 36 second-grade levels, gem (delegated)
-- [ ] T3b Scratch-like drag workspace, added on user request (delegated, after T3)
+- [x] T3b Scratch-like drag workspace, added on user request (delegated, after T3)
 - [ ] T4 Race mode (delegated)
 - [ ] T5 Coins and wardrobe (delegated)
 - [ ] T6 Class-long progress with reset, map first, friction fixes, teacher panel, README, cache bump (delegated)
@@ -123,3 +123,6 @@ Computers move from one class to the next (classes last ~50 min), so a new pair 
   Writer's browser run: all 36 second-grade levels won in the real UI, 0 console errors. Extra box kind `dark`
   (ghost or nothing). Screenshots on the Pi lack an emoji font, so icon look is unverified there.
 - Engram mirror pending: Engram does not resolve project programitos (ambiguous_project).
+- T3b (delegated, b012bb0): parent re-ran check-levels (ok) and check-workspace (ok, 12369 asserts) and looked at the
+  screenshots. Workspace 218x434 at 1024x600, 303x548 at 1366x768, no overlaps. Writer's drag script: 60 checks, 0 failures,
+  including two simultaneous touches. Cramped but not broken at 980x720 (203px tall).
