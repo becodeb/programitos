@@ -449,3 +449,27 @@ body.g2 .map-wrap{gap:8px;padding-bottom:12px}
 .race-coins{display:flex;justify-content:center;gap:40px;font-size:30px;margin:6px 0 10px}
 .race-coins b{font-size:22px;margin-left:6px}
 body.race .bubble{min-height:44px}
+
+/* ---------- Monedas y 👕 ropero ---------- */
+.coin{display:inline-block;width:.85em;height:.85em;margin:0 .12em;border-radius:50%;vertical-align:-.08em;border:2px solid #c99a00;
+  background:radial-gradient(circle at 35% 30%,#fff3b0 0 18%,#ffd23f 19% 62%,#e0a800 63%)}
+.win-coins{font-size:34px;min-height:38px;line-height:1.1}
+.ent.trail{font-size:calc(var(--cell)*.42);z-index:1}
+#ward-A{--pc:var(--a);--pd:var(--a-dark);--pl:var(--a-light)}
+#ward-B{--pc:var(--b);--pd:var(--b-dark);--pl:var(--b-light)}
+.wd-top{display:flex;align-items:center;gap:12px;background:var(--pl);border-radius:18px;padding:6px 12px;flex:0 0 auto}
+.wd-me{width:clamp(92px,18vh,170px);height:clamp(92px,18vh,170px);flex:0 0 auto}
+.wd-me svg{width:100%;height:100%}
+.wd-trail{font-size:26px;flex:1;min-width:0;overflow:hidden;white-space:nowrap}
+.wd-coins{font-size:32px;font-weight:700;background:#fff7d1;border-radius:20px;padding:4px 14px;white-space:nowrap}
+.wd-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px}
+.wd-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;background:#f6f6fc;border-radius:18px;padding:8px}
+.wd-item{position:relative;height:78px;border-radius:16px;background:#fff;border:3px solid #e4e4f0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.wd-item svg{width:48px;height:40px;pointer-events:none}
+.wd-item .wd-emoji{font-size:34px;line-height:40px}
+.wd-price{font-size:17px;line-height:1;white-space:nowrap}
+.wd-item.mine{border-color:var(--green)}
+.wd-item.on{background:var(--pl);border-color:var(--pc)}
+.wd-item.poor>svg,.wd-item.poor>.wd-emoji{opacity:.35}
+.wd-item.poor .wd-price{color:#999}
+.wd-ok{position:absolute;top:-6px;right:-4px;font-size:20px}

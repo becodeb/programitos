@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=13">
+<link rel="stylesheet" href="css/style.css?v=14">
 </head>
 <body>
 <div class="sky">
@@ -41,6 +41,7 @@
     <button class="icon-btn" id="map-back" title="Inicio">🏠</button>
     <div class="tools">
       <button class="icon-btn race-btn" id="btn-race" title="Carrera">🏁</button>
+      <button class="icon-btn" id="btn-ward" title="Ropero: vestir a Tito y a Lula">👕</button>
       <button class="icon-btn" id="btn-reset" title="Empezar de nuevo">🔄</button>
       <button class="icon-btn" id="btn-duo" title="Inventores: cada uno inventa un nivel">🎨</button>
       <button class="icon-btn" id="btn-workshop" title="Taller: inventar un nivel">🛠️</button>
@@ -102,6 +103,18 @@
   </div>
 </section>
 
+<!-- ROPERO: pantalla dividida, cada chico viste a su personaje -->
+<section id="scr-ward" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="ward-back" title="Mapa">🗺️</button>
+    <div class="chip"><span class="num">👕</span>¡Ropero!</div>
+  </header>
+  <div class="duo-grid">
+    <div class="duo-half" id="ward-A" data-p="A"></div>
+    <div class="duo-half" id="ward-B" data-p="B"></div>
+  </div>
+</section>
+
 <div class="overlay" id="ov-count"><div class="count-num" id="count-num">3</div></div>
 
 <div class="overlay" id="ov-fail">
@@ -130,6 +143,7 @@
   <div class="card">
     <div class="win-stars" id="win-stars"></div>
     <div class="win-gem" id="win-gem" hidden></div>
+    <div class="win-coins" id="win-coins"></div>
     <div class="win-duo"><div class="ch" id="win-A"></div><div class="sticker" id="win-sticker"></div><div class="ch" id="win-B"></div></div>
     <div class="hf-btns">
       <button class="hf hf-A" data-hf="A"><span class="hand">✋</span><span class="key">E</span></button>
@@ -208,9 +222,9 @@
       <ul class="t-help">
         <li>Juegan <b>dos chicos por compu</b>: Tito (izquierda) y Lula (derecha). Cada uno arma su programa; en los niveles el programa corre cuando <b>los dos</b> aprietan ▶.</li>
         <li><b>1°</b>: 8 mundos de 6 niveles (secuencias, giros, trabajo en equipo, <b>repetir</b> y <b>recoger</b> 🧺). <b>2°</b>: 6 mundos: repetir con pocos bloques, <b>repetir hasta la casita</b> 🔁🏠, <b>si hay estrella</b> 👀⭐ y <b>si hay fantasma</b> 👀👻, cofres 🎁 y casitas que se mueven. El 💎 premia usar pocos bloques.</li>
-        <li>Los bloques se <b>arrastran</b> (o se tocan en la paleta) y se encastran debajo del ▶ o dentro de un 🔁; soltarlos fuera de la paleta los borra. ⌫ borra el último, 🗑️ todo. Niveles 🤔: predecir la fruta. Niveles 🐛: arreglar el error.</li>
+        <li>Los bloques se <b>arrastran</b> (o se tocan en la paleta) y se encastran debajo del ▶ o dentro de un 🔁; soltarlos en la paleta los borra, y los que quedan sueltos no se ejecutan. ⌫ borra el último, 🗑️ todo. Niveles 🤔: predecir la fruta. Niveles 🐛: arreglar el error.</li>
         <li>💡 muestra las huellitas del camino (en los niveles de juntar estrellas, pasa por ellas). Si un nivel no sale después de 3 intentos aparece ⏭️ para saltarlo (sin estrellas).</li>
-        <li>🏁 <b>Carrera</b> (en el mapa): cada uno corre por su cuenta con su ▶, 5 rondas, gana monedas 🪙. 👕 <b>Ropero</b>: con las monedas cada uno viste a su personaje.</li>
+        <li>🏁 <b>Carrera</b> (en el mapa): cada uno corre por su cuenta con su ▶, 5 rondas, gana monedas. 👕 <b>Ropero</b>: con las monedas cada uno viste a su personaje.</li>
         <li><b>El progreso dura una clase</b>: se guarda en esta compu y vence a los <b>45 minutos</b> de que los dos se suman (recargar no lo borra). Vencido, se borra al volver al inicio o cuando nadie toca nada 3 minutos. 🔄 lo borra a mano, con confirmación.</li>
         <li>Teclado Tito: <b>W A S D</b>, <b>R</b> repetir, <b>T</b> hasta la casita, <b>F</b> recoger, <b>G</b>/<b>V</b> si-estrella/si-fantasma, <b>Z X</b> menos/más veces, <b>Q</b> borrar, <b>E</b> listo (▶). Lula: <b>flechas</b>, <b>Shift der.</b> repetir, <b>P</b> hasta la casita, <b>Ctrl der.</b> recoger, <b>L</b>/<b>K</b>, <b>, .</b> menos/más veces, <b>Backspace</b> borrar, <b>Enter</b> listo (▶).</li>
         <li>🛠️ Taller (se abre al terminar la playa de 1°) y 🎨 Inventores: las parejas inventan niveles. Ideal para quienes terminan antes.</li>
@@ -222,12 +236,13 @@
 
 <canvas id="confetti"></canvas>
 
-<script src="js/session.js?v=13"></script>
-<script src="js/engine.js?v=13"></script>
-<script src="js/race.js?v=13"></script>
-<script src="js/levels.js?v=13"></script>
-<script src="js/levels2.js?v=13"></script>
-<script src="js/workspace.js?v=13"></script>
-<script src="js/game.js?v=13"></script>
+<script src="js/session.js?v=14"></script>
+<script src="js/engine.js?v=14"></script>
+<script src="js/race.js?v=14"></script>
+<script src="js/wardrobe.js?v=14"></script>
+<script src="js/levels.js?v=14"></script>
+<script src="js/levels2.js?v=14"></script>
+<script src="js/workspace.js?v=14"></script>
+<script src="js/game.js?v=14"></script>
 </body>
 </html>

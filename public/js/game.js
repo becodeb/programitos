@@ -64,6 +64,7 @@ function titoSVG() {
   <circle cx="42.5" cy="41.5" r="2.4" fill="#fff"/><circle cx="62.5" cy="41.5" r="2.4" fill="#fff"/>
   <path d="M42 53 Q50 59 58 53" stroke="#1d2b45" stroke-width="3" fill="none" stroke-linecap="round"/>
   <circle cx="30.5" cy="54" r="4" fill="#ff9ec7"/><circle cx="69.5" cy="54" r="4" fill="#ff9ec7"/>
+  ${Wardrobe.layers('A', PF.wear.A)}
 </svg>`;
 }
 function lulaSVG() {
@@ -81,6 +82,7 @@ function lulaSVG() {
   <path d="M43 61 Q46.5 65 50 61 Q53.5 65 57 61" stroke="#2d2a4a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
   <g stroke="#c93a82" stroke-width="2" stroke-linecap="round"><line x1="22" y1="55" x2="34" y2="57"/><line x1="22" y1="62" x2="34" y2="60"/><line x1="78" y1="55" x2="66" y2="57"/><line x1="78" y1="62" x2="66" y2="60"/></g>
   <circle cx="28" cy="58" r="4.5" fill="#ffb3d6"/><circle cx="72" cy="58" r="4.5" fill="#ffb3d6"/>
+  ${Wardrobe.layers('B', PF.wear.B)}
 </svg>`;
 }
 function houseSVG(c, dark) {
@@ -130,6 +132,7 @@ function memProgress() { return Session.isProgress(JSON.stringify(S.save)) || Se
 function resetMemory() { S.save = freshSave(); resetPF(); }
 // Monedas y ropero: por personaje (Tito y Lula), compartidos entre 1.º y 2.º. Se borran con el resto del progreso.
 const PF_KEY = 'programitos-pf';
+const COIN = '<i class="coin"></i>';   // moneda dibujada: el emoji es muy nuevo para las compus viejas
 const freshPF = () => ({ coins: { A: 0, B: 0 }, owned: { A: [], B: [] }, wear: { A: {}, B: {} } });
 function loadPF() {
   try { const d = JSON.parse(SESS.get(PF_KEY)); if (d && d.coins && d.owned && d.wear) return d; } catch (e) {}
@@ -252,8 +255,7 @@ function setWorld(w) { document.body.className = (GRADE === 2 ? 'g2 x' : 'w') + 
 
 /* ---------- Inicio: los dos tocan su personaje ---------- */
 function initStart() {
-  $('.join-A').insertAdjacentHTML('afterbegin', titoSVG());
-  $('.join-B').insertAdjacentHTML('afterbegin', lulaSVG());
+  dressStart();
   $$('[data-join]').forEach(b => b.onclick = () => join(b.dataset.join));
   $$('[data-grade]').forEach(b => b.onclick = () => { Snd.play('click'); switchGrade(+b.dataset.grade); });
   markGrade();
@@ -277,7 +279,16 @@ function goStart() {
 }
 // Resumen en vivo del progreso (de los dos grados) y botón 🔄 que solo aparece si hay algo para borrar
 function starsOf(key) { try { const d = JSON.parse(SESS.get(key)); return Object.values((d && d.stars) || {}).reduce((a, b) => a + b, 0); } catch (e) { return 0; } }
+function dressStart() {
+  ['A', 'B'].forEach(p => {
+    const b = $('.join-' + p), old = b.querySelector('svg');
+    if (old) old.remove();
+    b.insertAdjacentHTML('afterbegin', P[p].svg());
+  });
+}
 function renderStart() {
+  dressStart();
+  $('#sp-coins').innerHTML = ['A', 'B'].map(p => `<span>${COIN}${PF.coins[p]}</span>`).join('');
   const has = SESS.hasProgress(), box = $('#start-prog');
   box.hidden = !has;
   if (has) box.querySelector('.sp-stars').textContent = '⭐ ' + (starsOf('programitos-v2') + starsOf('programitos-v2-g2'));
@@ -590,7 +601,7 @@ function startLevel(i, customL) {
   $('#btn-hint').classList.remove('glow');
   setTools(); parseLevel(); renderBoard();
   ['A', 'B'].forEach(p => { unready(p); renderProg(p); });
-  setBubble(S.L.text);
+  dressPanels(); setBubble(S.L.text);
   setTimeout(() => { Voice.say(S.L.say || S.L.text); ['A', 'B'].forEach(placeTuto); }, 250);
 }
 function setBubble(t) { $('#bubble-text').textContent = t; }
@@ -649,6 +660,14 @@ function fitBoard(b, w, cols, rows) {
   b.style.setProperty('--cell', cell + 'px');
   b.style.width = cell * cols + 'px'; b.style.height = cell * rows + 'px';
 }
+// Huella del ropero: queda en la casilla que el personaje deja atrás
+function dropTrail(p) {
+  const it = Wardrobe.BY_ID[PF.wear[p].trail]; if (!it) return;
+  const r = S.pos[p], e = document.createElement('div');
+  e.className = 'ent trail'; e.dataset.p = p; e.textContent = it.emoji;
+  e.style.setProperty('--x', r.x); e.style.setProperty('--y', r.y);
+  $('#board').appendChild(e);
+}
 function placeRobot(p, x, y) {
   const r = S.pos[p]; r.x = x; r.y = y;
   r.el.style.setProperty('--x', x); r.el.style.setProperty('--y', y);
@@ -681,7 +700,7 @@ function resetRun() {
   S.stars.forEach(s => s.el.classList.remove('got'));
   S.pads.forEach(pd => pd.el.classList.remove('on'));
   S.gates.forEach(g => g.el.classList.remove('open'));
-  $$('#board .foot').forEach(f => f.remove());
+  $$('#board .foot, #board .trail').forEach(f => f.remove());
   $$('.panel').forEach(p => p.classList.remove('active', 'locked'));
 }
 
@@ -780,7 +799,7 @@ async function runRobot(p, w) {
         face(ev.dir); r.el.classList.remove('hop', 'jump'); void r.el.offsetWidth; r.el.classList.add('bump');
         Snd.play('bump'); fx(p, '💫'); await sleep(600); r.el.classList.add('dizzy'); break;
       case 'move':
-        face(ev.dir); hop('hop'); placeRobot(p, ev.x, ev.y); Snd.play('step', p); await sleep(stepMs()); break;
+        face(ev.dir); hop('hop'); dropTrail(p); placeRobot(p, ev.x, ev.y); Snd.play('step', p); await sleep(stepMs()); break;
       case 'box': openBox(ev); Snd.play(ev.what === 'star' ? 'ready' : ev.what === 'ghost' ? 'full' : 'click'); await sleep(S.fast ? 220 : 340); break;
       case 'pad':
         S.pads.forEach(pd => pd.el.classList.add('on')); Snd.play('press'); await sleep(150);
@@ -842,8 +861,11 @@ async function win() {
   const total = S.W.total, rating = (total === 0 || S.W.got === total) ? 3 : 2;
   // 💎: premio extra por usar pocos bloques (nunca resta; las estrellas no dependen de esto)
   const par = !isPredict() && !S.custom && S.L.par, gem = !!par && countOf('A') <= par.A && countOf('B') <= par.B;
+  let coins = 0;
   if (!S.custom) {
     ensureSession();
+    coins = Wardrobe.levelCoins(!S.save.stars[S.idx], rating, gem && !(S.save.gems || {})[S.idx]);
+    ['A', 'B'].forEach(p => addCoins(p, coins));
     S.save.stars[S.idx] = Math.max(S.save.stars[S.idx] || 0, rating);
     if (gem) (S.save.gems = S.save.gems || {})[S.idx] = true;
     if (worldOf(S.idx) < FREE_FROM) S.save.unlocked = Math.max(S.save.unlocked, Math.min(S.idx + 1, LEVELS.length - 1));
@@ -854,6 +876,7 @@ async function win() {
   const gi = $('#win-gem'); gi.hidden = !par; gi.className = 'win-gem' + (gem ? '' : ' empty');
   gi.innerHTML = par ? `<span>💎</span><small>${par.A}·${par.B}</small>` : '';
   $('#win-A').innerHTML = titoSVG(); $('#win-B').innerHTML = lulaSVG();
+  $('#win-coins').innerHTML = COIN.repeat(coins);
   $('#win-sticker').textContent = S.custom ? '🛠️' : STICKERS[S.idx];
   S.hf = { A: false, B: false };
   $$('#ov-win .hf').forEach(h => h.classList.remove('on')); $('#ov-win .hf-btns').classList.remove('clap');
@@ -1120,9 +1143,44 @@ function duoPlay() {
   setTimeout(() => { Snd.play('go'); startLevel(0, levels[0]); S.duo = { levels, i: 0 }; }, 500);
 }
 
+/* ---------- 👕 Ropero: cada chico viste a su personaje con sus monedas ---------- */
+function openWard() {
+  overlay(null); Voice.stop(); ensureSession(); setWorld(0); show('scr-ward');
+  wardDraw('A'); wardDraw('B');
+  Voice.say('¡El ropero! Cada uno viste a su personaje con sus monedas.');
+}
+function wardItem(p, it) {
+  const s = Wardrobe.status(PF, p, it.id);
+  const cls = (s.worn ? ' on' : '') + (s.owned ? ' mine' : s.affordable ? '' : ' poor');
+  const tag = s.worn ? '<b class="wd-ok">✅</b>' : s.owned ? '' : `<b class="wd-price">${COIN}${it.price}</b>`;
+  return `<button class="wd-item${cls}" data-wd="${it.id}">${Wardrobe.icon(it.id)}${tag}</button>`;
+}
+function wardDraw(p) {
+  const half = $('#ward-' + p), old = half.querySelector('.wd-list'), top = old ? old.scrollTop : 0;
+  const trail = Wardrobe.BY_ID[PF.wear[p].trail];
+  const rows = Wardrobe.SLOTS.map(slot => `<div class="wd-row">${Wardrobe.ITEMS.filter(i => i.slot === slot).map(i => wardItem(p, i)).join('')}</div>`).join('');
+  half.className = 'duo-half h-' + p;
+  half.innerHTML = `<div class="wd-top"><div class="wd-me">${P[p].svg()}</div><span class="wd-trail">${trail ? trail.emoji.repeat(3) : ''}</span><span class="wd-coins">${COIN}${PF.coins[p]}</span></div><div class="wd-list">${rows}</div>`;
+  half.querySelector('.wd-list').scrollTop = top;
+}
+function wardTap(p, b) {
+  ensureSession();
+  const r = Wardrobe.tap(PF, p, b.dataset.wd);
+  if (r.action === 'poor') {
+    Snd.play('full');
+    b.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 260);
+    return;
+  }
+  savePF();
+  Snd.play(r.action === 'buy' ? 'star' : r.action === 'off' ? 'del' : 'join', p);
+  wardDraw(p);
+  $(`#ward-${p} .wd-me`).animate([{ transform: 'scale(.85)' }, { transform: 'scale(1.1)' }, { transform: 'none' }], 300);
+}
+
 /* ---------- 🏁 Carrera: cada chico corre por su cuenta, 5 rondas, monedas ---------- */
 let RACE_ID = 0;
-function renderCoins() { ['A', 'B'].forEach(p => { const e = $('#coin-' + p); if (e) e.textContent = '🪙 ' + PF.coins[p]; }); }
+function renderCoins() { ['A', 'B'].forEach(p => { const e = $('#coin-' + p); if (e) e.innerHTML = COIN + PF.coins[p]; }); }
+function dressPanels() { ['A', 'B'].forEach(p => { const e = $(`#panel-${p} .avatar`); if (e) e.innerHTML = P[p].svg(); }); renderCoins(); }
 function addCoins(p, n) { ensureSession(); PF.coins[p] += n; savePF(); renderCoins(); }
 function startRace() {
   ensureSession();
@@ -1147,7 +1205,7 @@ function raceRound(n) {
   $('#lvl-num').textContent = '🏁'; $('#lvl-world').textContent = '●'.repeat(n) + '○'.repeat(Race.ROUNDS - n);
   setTools(); parseLevel(); renderBoard();
   $('#board').style.setProperty('--step', (stepMs() * .85) / 1000 + 's');
-  ['A', 'B'].forEach(p => { unready(p); renderProg(p); }); renderCoins();
+  ['A', 'B'].forEach(p => { unready(p); renderProg(p); }); dressPanels();
   setBubble('🏁');
   Voice.say(n === 1 ? '¡Carrera! Cada uno corre con su propio botón. ¡El primero en llegar gana más monedas!' : `¡Ronda ${n}!`);
   const id = R.id;
@@ -1161,7 +1219,7 @@ function resetRobot(p) {
   void r.el.offsetWidth; r.el.style.transition = '';
   if (S.homes[p] && S.homes[p].el) S.homes[p].el.classList.remove('glow');
   S.stars.forEach(st => { if ((st.x < Race.LANE ? 'A' : 'B') === p) st.el.classList.remove('got'); });
-  $$(`#board .foot[data-p="${p}"]`).forEach(f => f.remove());
+  $$(`#board .foot[data-p="${p}"], #board .trail[data-p="${p}"]`).forEach(f => f.remove());
 }
 async function raceGo(p) {
   const R = S.race; if (!R || R.busy[p] || R.arrived.includes(p) || S.overlay || !countOf(p)) return;
@@ -1185,7 +1243,7 @@ async function raceArrive(p) {
   R.arrived.push(p);
   const coins = R.arrived.length === 1 ? 2 : 1;
   R.won[p] += coins; addCoins(p, coins);
-  fx(p, '🪙'.repeat(coins)); Snd.play('star');
+  fx(p, '🎉'); Snd.play('star');
   $(`#board .foot[data-p="${p}"]`) && $$(`#board .foot[data-p="${p}"]`).forEach(f => f.remove());
   if (R.arrived.length === 1) {                       // una banderita amistosa para el que todavía no llegó, sin apuro
     const o = p === 'A' ? 'B' : 'A', h = S.homes[o];
@@ -1196,7 +1254,7 @@ async function raceArrive(p) {
   await sleep(1100); if (!alive()) return;
   const last = n >= Race.ROUNDS;
   if (last) return raceFinish();
-  const vs = ['A', 'B'].map(q => `<div class="rc"><div class="ch">${P[q].svg()}</div><div class="rc-coins">${'🪙'.repeat(R.arrived.indexOf(q) === 0 ? 2 : 1)}</div></div>`).join('');
+  const vs = ['A', 'B'].map(q => `<div class="rc"><div class="ch">${P[q].svg()}</div><div class="rc-coins">${COIN.repeat(R.arrived.indexOf(q) === 0 ? 2 : 1)}</div></div>`).join('');
   $('#round-body').innerHTML = `<div class="rc-dots">${'●'.repeat(n)}${'○'.repeat(Race.ROUNDS - n)}</div><div class="rc-row">${vs}</div>`;
   overlay('ov-round'); Snd.play('clap');
   await sleep(2000); if (!alive()) return;
@@ -1205,7 +1263,7 @@ async function raceArrive(p) {
 function raceFinish() {
   const R = S.race;
   $('#race-A').innerHTML = P.A.svg(); $('#race-B').innerHTML = P.B.svg();
-  $('#race-coins').innerHTML = ['A', 'B'].map(q => `<span>${'🪙'.repeat(Math.min(R.won[q], 10)) || '·'}<b>${R.won[q]}</b></span>`).join('');
+  $('#race-coins').innerHTML = ['A', 'B'].map(q => `<span>${COIN.repeat(Math.min(R.won[q], 10)) || '·'}<b>${R.won[q]}</b></span>`).join('');
   overlay('ov-race-end'); Snd.play('win'); confetti(150);
   Voice.say('¡Terminó la carrera! ¡Los dos son campeones!');
 }
@@ -1364,6 +1422,9 @@ function init() {
   $('#btn-workshop').onclick = openEditor;
   $('#btn-duo').onclick = () => { Snd.play('click'); openDuo(); };
   $('#duo-back').onclick = openMap;
+  $('#btn-ward').onclick = () => { Snd.play('click'); openWard(); };
+  $('#ward-back').onclick = openMap;
+  ['A', 'B'].forEach(p => { $('#ward-' + p).onclick = e => { const b = e.target.closest('[data-wd]'); if (b) wardTap(p, b); }; });
   $('#final-album').onclick = openAlbum;
   $('#final-workshop').onclick = openEditor;
   $('#final-map').onclick = openMap;
