@@ -10,7 +10,7 @@ Juego web de **programación secuencial para 1.º y 2.º grado**, pensado para j
 - **El progreso dura una clase**: las compus pasan de un curso a otro, así que el progreso (de los dos grados) vence a los **45 minutos** de que los dos se suman. Recargar la página lo mantiene. Una vez vencido se borra al volver al inicio o cuando nadie toca nada durante 3 minutos (nunca en medio de un nivel). El botón 🔄 (mapa e inicio) lo borra a mano con una tarjeta de confirmación. Sonido, voz y grado elegido se mantienen.
 - Modo docente (🍎 en el mapa, pide una cuenta): cambiar de 1.º/2.º, desbloquear niveles, borrar el progreso, ir a un nivel.
 
-Teclado: Tito `W A S D`, `R` repetir, `T` hasta la casita, `F` recoger, `G`/`V` condiciones, `Q` borrar, `E` listo · Lula flechas, `Shift der.` repetir, `P` hasta la casita, `Ctrl der.` recoger, `L`/`K` condiciones, `Backspace` borrar, `Enter` listo.
+Teclado: Tito `W A S D`, `R` repetir, `T` hasta la casita, `F` recoger, `G`/`V` condiciones, `Q` borrar, `E` listo · Lula flechas, `Shift der.` repetir, `P` hasta la casita, `O` recoger, `L`/`K` condiciones, `Backspace` borrar, `Enter` listo.
 
 ## Pruebas (node, sin dependencias)
 

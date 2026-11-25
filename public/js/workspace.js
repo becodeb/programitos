@@ -116,7 +116,7 @@
   function nearest(pts, gx, gy, gh, snap) {
     let best = null;
     for (const pt of pts) {
-      const dist = Math.hypot(gx - pt.x, (pt.kind === 'above' ? gy + gh : gy) - pt.y);
+      const dist = Math.hypot((gx - pt.x) * .55, (pt.kind === 'above' ? gy + gh : gy) - pt.y);
       if (dist <= (snap || SNAP) && (!best || dist < best.dist)) best = { pt, dist };
     }
     return best;
@@ -132,8 +132,10 @@
   WS.attach = function (host) {
     const $ = s => document.querySelector(s);
     const DRAG = new Map();                       // pointerId -> arrastre (cada chico, el suyo)
+    const PAN = new Map();                        // pointerId -> deslizar el área con el dedo
+    let tokens = 0;
     const PAL = ['u', 'd', 'l', 'r', 'j', 'c', 'g', 'rep', 'h'];
-    let swallow = false;
+    const swallow = { A: 0, B: 0 };               // por chico: el arrastre de uno no se come los toques del otro
     const wsEl = p => document.getElementById('prog-' + p);
     const inRect = (x, y, r) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
     const model = p => ({ prog: host.S.prog[p], loose: host.S.loose[p] });
@@ -145,8 +147,9 @@
       const blk = t.closest('.blk');
       if (blk && blk.closest('#prog-' + p) && !blk.classList.contains('ro'))
         return { kind: 'blk', s: +blk.dataset.s, i: +blk.dataset.i, j: blk.dataset.j !== undefined ? +blk.dataset.j : undefined, el: blk };
-      const head = t.closest('.rep-head');
-      if (head && head.closest('#prog-' + p) && !t.closest('button')) { const rep = head.parentNode; return { kind: 'blk', s: +rep.dataset.s, i: +rep.dataset.ri, el: head }; }
+      // El repetir se agarra de cualquier parte (cabeza con sus botones, brazo, boca vacía o pie): tocar sin mover sigue siendo un click
+      const rep = t.closest('.rep');
+      if (rep && rep.closest('#prog-' + p)) return { kind: 'blk', s: +rep.dataset.s, i: +rep.dataset.ri, el: rep, far: !!t.closest('button') };   // en − n + ✔ hay que moverse más: un click apurado no arranca un arrastre
       return null;
     }
 
@@ -155,24 +158,44 @@
       if (!host.active() || host.predict()) return;
       const panel = e.target.closest && e.target.closest('.panel'); if (!panel) return;
       const p = panel.dataset.p;
+      // Arrastres que quedaron colgados (se perdió el "soltar"): se cierran para que no traben los que siguen
+      [...DRAG.values()].forEach(d => { if (d.id === e.pointerId || (d.p === p && !d.on)) end(d, null, true); });
+      PAN.delete(e.pointerId);
       if (host.busy(p) || [...DRAG.values()].some(d => d.p === p)) return;
-      const src = sourceAt(e.target, p); if (!src) return;
+      const src = sourceAt(e.target, p);
+      if (!src) {                                       // fondo del área: con el dedo, desliza
+        const ws = wsEl(p);
+        if (e.pointerType !== 'mouse' && ws.contains(e.target)) PAN.set(e.pointerId, { ws, x: e.clientX, y: e.clientY });
+        return;
+      }
       const r = src.el.getBoundingClientRect();
       const off = src.kind === 'pal' ? { x: 30, y: 18 } : { x: e.clientX - r.left, y: e.clientY - r.top };
       DRAG.set(e.pointerId, { id: e.pointerId, p, src, sx: e.clientX, sy: e.clientY, cx: e.clientX, cy: e.clientY, off, on: false, raf: 0 });
     });
     document.addEventListener('pointermove', e => {
+      const pan = PAN.get(e.pointerId);
+      if (pan) { pan.ws.scrollLeft -= e.clientX - pan.x; pan.ws.scrollTop -= e.clientY - pan.y; pan.x = e.clientX; pan.y = e.clientY; return; }
       const d = DRAG.get(e.pointerId); if (!d) return;
+      if (e.pointerType === 'mouse' && !(e.buttons & 1)) return end(d, null, true);      // se soltó donde no nos enteramos
       d.cx = e.clientX; d.cy = e.clientY;
-      if (!d.on) { if (Math.hypot(d.cx - d.sx, d.cy - d.sy) < 8) return; if (!start(d)) { DRAG.delete(d.id); return; } }
+      if (!d.on) { if (Math.hypot(d.cx - d.sx, d.cy - d.sy) < (d.src.far ? 18 : 6)) return; if (!start(d)) { DRAG.delete(d.id); return; } }
       schedule(d);
     });
-    document.addEventListener('pointerup', e => { const d = DRAG.get(e.pointerId); if (d) end(d, e, false); });
-    document.addEventListener('pointercancel', e => { const d = DRAG.get(e.pointerId); if (d) end(d, e, true); });
+    document.addEventListener('pointerup', e => { PAN.delete(e.pointerId); const d = DRAG.get(e.pointerId); if (d) end(d, e, false); });
+    document.addEventListener('pointercancel', e => { PAN.delete(e.pointerId); const d = DRAG.get(e.pointerId); if (d) end(d, e, true); });
     window.addEventListener('blur', cancelAll);
+    // El navegador no tiene que empezar un arrastre propio, seleccionar ni abrir el menú: eso corta el nuestro
+    const typing = t => t && t.closest && t.closest('input');
+    document.addEventListener('dragstart', e => e.preventDefault());
+    document.addEventListener('selectstart', e => { if (!typing(e.target)) e.preventDefault(); });
+    document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('#scr-game')) e.preventDefault(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAll(); });
     // Después de arrastrar, el "click" que sigue al soltar no tiene que apretar nada
-    document.addEventListener('click', e => { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
+    document.addEventListener('click', e => {
+      const pan = e.target.closest && e.target.closest('.panel'), who = pan ? pan.dataset.p : swallow.A ? 'A' : 'B';
+      if (!pan && e.target !== document.body && e.target !== document.documentElement) return;
+      if (swallow[who]) { swallow[who] = 0; e.stopPropagation(); e.preventDefault(); }
+    }, true);
 
     function cancelAll() { [...DRAG.values()].forEach(d => end(d, null, true)); }
     function schedule(d) { if (!d.raf) d.raf = requestAnimationFrame(() => frame(d)); }
@@ -193,7 +216,7 @@
       d.gw = g.offsetWidth; d.gh = g.offsetHeight;
       const ph = document.createElement('div'); ph.className = 'ph'; ph.style.width = d.gw + 'px'; ph.style.height = d.gh + 'px'; d.ph = ph;
       try { document.body.setPointerCapture(d.id); } catch (err) {}
-      d.on = true; swallow = true;
+      d.on = true; d.token = ++tokens; swallow[p] = d.token;
       host.touched(p);
       if (d.src.kind === 'blk') host.render(p);        // la pila sale del área; el ghost la lleva
       d.wsr = ws.getBoundingClientRect();
@@ -285,7 +308,7 @@
       d.ph.remove(); d.ghost.remove();
       try { document.body.releasePointerCapture(d.id); } catch (err) {}
       panel.classList.remove('dragging', 'drag-del'); ws.classList.remove('drag-on', 'drop-on');
-      setTimeout(() => { swallow = false; }, 60);
+      setTimeout(() => { if (swallow[p] === d.token) swallow[p] = 0; }, 60);
       const restore = () => { setModel(p, d.orig); host.render(p); };
       if (cancel || host.busy(p) || !host.active()) return restore();
       if (!d.inWs) {                                    // afuera del área: lo que venía del programa se borra

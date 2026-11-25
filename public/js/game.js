@@ -351,7 +351,7 @@ function openMap() {
 function buildPanel(p) {
   const el = $('#panel-' + p), isA = p === 'A';
   const k = isA ? { u: 'W', l: 'A', d: 'S', r: 'D', j: 'F', rep: 'R', h: 'T', c: 'G', g: 'V', back: 'Q', ready: 'E' }
-                : { u: '↑', l: '←', d: '↓', r: '→', j: 'Ctrl', rep: 'Shift', h: 'P', c: 'L', g: 'K', back: '⌫', ready: 'Enter' };
+                : { u: '↑', l: '←', d: '↓', r: '→', j: 'O', rep: 'Shift', h: 'P', c: 'L', g: 'K', back: '⌫', ready: 'Enter' };
   el.innerHTML = `
     <div class="p-head"><div class="avatar">${P[p].svg()}</div><div class="order" id="order-${p}"></div><div class="coin-ct" id="coin-${p}"></div>
       <div class="p-actions">
@@ -1331,9 +1331,13 @@ function checkTeacher() {
 /* ---------- Teclado (dos jugadores en la misma compu) ---------- */
 // Z / X y , / . : menos y más veces en el último repetir
 const KEYS_A = { KeyW: 'u', KeyA: 'l', KeyS: 'd', KeyD: 'r', KeyR: 'rep', KeyF: 'j', KeyT: 'h', KeyG: 'c', KeyV: 'g', KeyZ: 'rep-', KeyX: 'rep+', KeyQ: 'back', KeyE: 'ready' };
-const KEYS_B = { ArrowUp: 'u', ArrowLeft: 'l', ArrowDown: 'd', ArrowRight: 'r', ShiftRight: 'rep', ControlRight: 'j', KeyP: 'h', KeyL: 'c', KeyK: 'g', Comma: 'rep-', Period: 'rep+', Backspace: 'back', Enter: 'ready', NumpadEnter: 'ready' };
+const KEYS_B = { ArrowUp: 'u', ArrowLeft: 'l', ArrowDown: 'd', ArrowRight: 'r', ShiftRight: 'rep', KeyO: 'j', KeyP: 'h', KeyL: 'c', KeyK: 'g', Comma: 'rep-', Period: 'rep+', Backspace: 'back', Enter: 'ready', NumpadEnter: 'ready' };
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') { if (e.key === 'Enter') checkTeacher(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) {          // Ctrl+A seleccionaba toda la página y Ctrl+D/S/F/P/G abrían ventanas del navegador
+    if (['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyP'].includes(e.code)) e.preventDefault();
+    return;
+  }
   if (e.repeat) return;
   Snd.init();
   const scr = $('.screen.active').id, pA = KEYS_A[e.code], pB = KEYS_B[e.code];

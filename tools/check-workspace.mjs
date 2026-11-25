@@ -189,7 +189,7 @@ ok(W.count(P('rd')) === 2 && W.count(P('3(rd)')) === 3 && W.count(P('r3(rd)d')) 
   ok(W.nearest(pts, 12, 80, 36).pt.i === 1, 'nearest: elige el de abajo cuando está más cerca');
   ok(W.nearest(pts, 300, 300, 36) === null, 'nearest: lejos de todo no encastra');
   ok(W.nearest(pts, 100, 200 - 36, 36).pt.kind === 'above', 'nearest: para "arriba de una suelta" cuenta el pie de lo arrastrado');
-  ok(W.nearest(pts, 10 + 39, 50, 36) && !W.nearest(pts, 10 + 41, 50, 36) || W.nearest(pts, 10 + 41, 50, 36).pt.i === 1, 'nearest: el límite son 40 px');
+  ok(W.nearest(pts, 10, 50 - 39, 36) && W.nearest(pts, 10 + 70, 50, 36) && !W.nearest(pts, 10 + 90, 50, 36), 'nearest: 40 px a lo alto y unos 70 a lo ancho');
 }
 
 if (errors.length) { console.log(errors.slice(0, 25).join('\n')); console.log(`FALLAN ${errors.length} de ${checks}`); process.exit(1); }

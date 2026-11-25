@@ -473,3 +473,7 @@ body.race .bubble{min-height:44px}
 .wd-item.poor>svg,.wd-item.poor>.wd-emoji{opacity:.35}
 .wd-item.poor .wd-price{color:#999}
 .wd-ok{position:absolute;top:-6px;right:-4px;font-size:20px}
+
+/* En el juego el navegador no desliza ni hace zoom por su cuenta: con dos chicos tocando, eso cortaba el arrastre del otro */
+#scr-game,#scr-game *{touch-action:none}
+.rep{cursor:grab}
