@@ -69,6 +69,12 @@ Today a drag moves one block of a full-width list and a line marks the target. M
 - Dropping on the palette or outside the panel deletes; the palette shows 🗑️ while dragging a placed block.
 - Tapping a palette block still appends to the hat stack (keyboard too). Two pointers can drag at the same time.
 - Limits stay: level max and 3 blocks per C body; what does not fit bounces back or stays loose, never disappears.
+- Room to work (user request): the workspace grows and everything else shrinks. Palette becomes a compact vertical
+  toolbox column (two columns only if tools do not fit) beside the workspace; panels widen and the board shrinks
+  (about 300px panels at 1024x600, about 400px at 1366x768); head, edit buttons and run button share less height.
+  Placed blocks 34-38px tall, palette buttons at least 44px. Targets: workspace at least 210x360 at 1024x600 and
+  300x480 at 1366x768; a max-size program scrolls inside the workspace without covering anything; board cell at
+  least 46px at 1024x600.
 - Predict levels stay read-only. Retry keeps the program, loose stacks included.
 
 ### Fun for everyone (T4, T5)
