@@ -9,8 +9,6 @@ const PER_WORLD = 6;
 const DIRS = Engine.DIRS;
 const ATOMS = ['j', 'c', 'g'];       // bloques sueltos que también van adentro de un repetir
 const ROT = { r: 0, d: 90, l: 180, u: 270 };
-const TURN = ['r', 'd', 'l', 'u'];
-const REP_BODY_MAX = 3;
 const STICKERS1 = ['🦄', '🐸', '🦖', '🐙', '🦁', '🐼', '🐢', '🦀', '🐬', '🌴', '🍉', '🐳',
   '🐧', '⛄', '🦊', '🦉', '🦌', '🎿', '🚀', '👽', '🪐', '🛸', '🌟', '👑',
   '🦘', '🐊', '🦋', '🌺', '🐠', '🏅',
@@ -196,7 +194,7 @@ if (window.speechSynthesis) { Voice.pick(); speechSynthesis.onvoiceschanged = ()
 applyGrade(readGrade());
 const S = {
   save: load(), idx: 0, L: null, custom: false, grid: null, cols: 0, rows: 0,
-  prog: { A: [], B: [] }, ready: { A: false, B: false }, pick: { A: null, B: null }, running: false,
+  prog: { A: [], B: [] }, loose: { A: [], B: [] }, ready: { A: false, B: false }, pick: { A: null, B: null }, running: false,
   pos: {}, start: {}, homes: {}, stars: [], pads: [], gates: [], fruits: [], gatesOpen: false,
   got: 0, fails: 0, fast: false, joined: { A: false, B: false }, hf: { A: false, B: false }, sw: { A: false, B: false },
   overlay: null, tuto: null
@@ -282,40 +280,43 @@ function buildPanel(p) {
   const k = isA ? { u: 'W', l: 'A', d: 'S', r: 'D', j: 'F', rep: 'R', h: 'T', c: 'G', g: 'V', back: 'Q', ready: 'E' }
                 : { u: '↑', l: '←', d: '↓', r: '→', j: 'Ctrl', rep: 'Shift', h: 'P', c: 'L', g: 'K', back: '⌫', ready: 'Enter' };
   el.innerHTML = `
-    <div class="p-head"><div class="avatar">${P[p].svg()}</div><div class="order" id="order-${p}"></div></div>
-    <div class="prog" id="prog-${p}"></div>
-    <div class="palette">
-      <button class="pal up d-u" data-act="u">${arrowSVG('u')}<span class="key">${k.u}</span></button>
-      <button class="pal jp" data-act="j" style="grid-column:3;grid-row:1"><span class="jico">🧺</span><span class="key">${k.j}</span></button>
-      <button class="pal left d-l" data-act="l">${arrowSVG('l')}<span class="key">${k.l}</span></button>
-      <button class="pal down d-d" data-act="d">${arrowSVG('d')}<span class="key">${k.d}</span></button>
-      <button class="pal right d-r" data-act="r">${arrowSVG('r')}<span class="key">${k.r}</span></button>
-      <button class="pal rp" data-act="rep"><span class="rp-txt">🔁</span><span class="key">${k.rep}</span></button>
-      <button class="pal hp" data-act="h" title="Repetir hasta la casita"><span class="rp-txt">🔁🏠</span><span class="key">${k.h}</span></button>
-      <button class="pal cp" data-act="c" title="Si hay estrella, recoger">${ICO.c}<span class="key">${k.c}</span></button>
-      <button class="pal gp" data-act="g" title="Si hay fantasma, alumbrar">${ICO.g}<span class="key">${k.g}</span></button>
+    <div class="p-head"><div class="avatar">${P[p].svg()}</div><div class="order" id="order-${p}"></div>
+      <div class="p-actions">
+        <button class="act" data-act="back" title="Borrar el último">⌫<span class="key">${k.back}</span></button>
+        <button class="act" data-act="clear" title="Borrar todo">🗑️</button>
+      </div></div>
+    <div class="p-main">
+      <div class="palette">
+        <button class="pal up d-u" data-act="u">${arrowSVG('u')}<span class="key">${k.u}</span></button>
+        <button class="pal down d-d" data-act="d">${arrowSVG('d')}<span class="key">${k.d}</span></button>
+        <button class="pal left d-l" data-act="l">${arrowSVG('l')}<span class="key">${k.l}</span></button>
+        <button class="pal right d-r" data-act="r">${arrowSVG('r')}<span class="key">${k.r}</span></button>
+        <button class="pal jp" data-act="j"><span class="jico">🧺</span><span class="key">${k.j}</span></button>
+        <button class="pal rp" data-act="rep"><span class="rp-txt">🔁</span><span class="key">${k.rep}</span></button>
+        <button class="pal hp" data-act="h" title="Repetir hasta la casita"><span class="rp-txt">🔁🏠</span><span class="key">${k.h}</span></button>
+        <button class="pal cp" data-act="c" title="Si hay estrella, recoger">${ICO.c}<span class="key">${k.c}</span></button>
+        <button class="pal gp" data-act="g" title="Si hay fantasma, alumbrar">${ICO.g}<span class="key">${k.g}</span></button>
+      </div>
+      <div class="prog" id="prog-${p}"></div>
     </div>
     <div class="predict">${FRUITS[p].map((f, i) => `<button class="pick-btn" data-pick="${i}">${f}</button>`).join('')}</div>
-    <div class="p-actions">
-      <button class="act" data-act="back" title="Borrar el último">⌫<span class="key">${k.back}</span></button>
-      <button class="act" data-act="clear" title="Borrar todo">🗑️</button>
-    </div>
     <button class="ready" data-act="ready"><span class="ready-txt">▶</span><span class="key">${k.ready}</span></button>`;
   el.onclick = e => {
     const b = e.target.closest('button'); if (!b || S.running || S.overlay) return;
     if (b.dataset.act) return act(p, b.dataset.act);
     if (b.dataset.pick !== undefined) return pick(p, +b.dataset.pick);
     if (isPredict()) return;
-    if (b.dataset.rm !== undefined) return stepRep(p, +b.dataset.rm, -1);
-    if (b.dataset.rp !== undefined) return stepRep(p, +b.dataset.rp, 1);
-    if (b.dataset.rclose !== undefined) return closeRep(p, +b.dataset.rclose);
-    if (b.dataset.n !== undefined) return cycleRep(p, +b.dataset.n);
+    const s = +b.dataset.s;
+    if (b.dataset.rm !== undefined) return stepRep(p, s, +b.dataset.rm, -1);
+    if (b.dataset.rp !== undefined) return stepRep(p, s, +b.dataset.rp, 1);
+    if (b.dataset.rclose !== undefined) return closeRep(p, s, +b.dataset.rclose);
+    if (b.dataset.n !== undefined) return cycleRep(p, s, +b.dataset.n);
     // Tocar un bloque puesto no hace nada: para sacarlo se arrastra afuera o se usa ⌫
   };
 }
 
 function act(p, a) {
-  if (S.running || S.overlay) return;
+  if (S.running || S.overlay || (WS && WS.dragging(p))) return;
   if (a === 'ready') return toggleReady(p);
   if (isPredict()) return;
   const prog = S.prog[p], last = prog[prog.length - 1];
@@ -324,8 +325,8 @@ function act(p, a) {
   if (DIRS[a] || ATOMS.includes(a)) {
     if (!S.L.tools.includes(a)) return;
     if (countOf(p) >= S.L.max) return full(p);
-    if (openRep) { openRep.body.push(a); S.flash = { p, i: prog.length - 1, j: openRep.body.length - 1 }; if (openRep.body.length >= REP_BODY_MAX) openRep.open = false; }
-    else { prog.push({ t: 'm', d: a }); S.flash = { p, i: prog.length - 1 }; }
+    if (openRep) { openRep.body.push(a); S.flash = { p, s: 0, i: prog.length - 1, j: openRep.body.length - 1 }; if (openRep.body.length >= Workspace.MAX_BODY) openRep.open = false; }
+    else { prog.push({ t: 'm', d: a }); S.flash = { p, s: 0, i: prog.length - 1 }; }
     Snd.play('add', a); pressFx(p, a);
   } else if (a === 'rep' || a === 'h') {
     if (!S.L.tools.includes(a)) return;
@@ -333,12 +334,12 @@ function act(p, a) {
     else {
       if (countOf(p) >= S.L.max) return full(p);
       prog.push(a === 'h' ? { t: 'rep', u: true, n: 2, body: [], open: true } : { t: 'rep', n: 2, body: [], open: true });
-      S.flash = { p, i: prog.length - 1 }; Snd.play('rep');
+      S.flash = { p, s: 0, i: prog.length - 1 }; Snd.play('rep');
       Voice.say(a === 'h' ? 'Poné adentro lo que se repite hasta llegar a la casita.' : 'Poné adentro lo que se repite.');
     }
   } else if (a === 'rep-' || a === 'rep+') {                  // teclado: menos / más veces en el último repetir
     let i = prog.length - 1; while (i >= 0 && !(prog[i].t === 'rep' && !prog[i].u)) i--;
-    if (i >= 0) stepRep(p, i, a === 'rep+' ? 1 : -1);
+    if (i >= 0) stepRep(p, 0, i, a === 'rep+' ? 1 : -1);
     return;
   } else if (a === 'back') {
     if (!last) return;
@@ -346,8 +347,8 @@ function act(p, a) {
     else prog.pop();
     Snd.play('del');
   } else if (a === 'clear') {
-    if (!prog.length) return;
-    S.prog[p] = []; Snd.play('del');
+    if (!prog.length && !S.loose[p].length) return;
+    S.prog[p] = []; S.loose[p] = []; Snd.play('del');
   }
   tutoDone(p, a);
   renderProg(p);
@@ -360,21 +361,23 @@ function full(p) {
   Snd.play('full');
   const pr = $('#prog-' + p); pr.style.borderColor = '#e63946'; setTimeout(() => pr.style.borderColor = '', 400);
 }
-function cycleRep(p, i) {
-  const it = S.prog[p][i]; if (!it) return;
+// Pila s de un chico: 0 = la del ▶, k = la suelta k
+const stackOf = (p, s) => s === 0 ? S.prog[p] : (S.loose[p][s - 1] || {}).items || [];
+function cycleRep(p, s, i) {
+  const it = stackOf(p, s)[i]; if (!it) return;
   it.n = it.n >= 9 ? 2 : it.n + 1; unready(p);
   Snd.play('add', 'u'); tutoDone(p, 'repn'); renderProg(p);
 }
 // Botones − / + del repetir: cambian cuántas veces repite (de 2 a 9) y lo dicen en voz alta
-function stepRep(p, i, k) {
-  const it = S.prog[p][i]; if (!it || it.u) return;
+function stepRep(p, s, i, k) {
+  const it = stackOf(p, s)[i]; if (!it || it.u) return;
   const n = Math.max(2, Math.min(9, it.n + k));
   if (n === it.n) return Snd.play('full');
   it.n = n; unready(p); Snd.play('add', k > 0 ? 'u' : 'd'); tutoDone(p, 'repn'); Voice.say(n + ' veces'); renderProg(p);
 }
 // Botón ✔ al pie de un repetir abierto: lo que se agregue después va afuera
-function closeRep(p, i) {
-  const it = S.prog[p][i]; if (!it || it.t !== 'rep') return;
+function closeRep(p, s, i) {
+  const it = stackOf(p, s)[i]; if (!it || it.t !== 'rep') return;
   it.open = false; unready(p); Snd.play('ready'); renderProg(p);
 }
 // Vista previa: lo de adentro, repetido n veces, en chiquito
@@ -386,14 +389,6 @@ function repPreview(it) {
   if (it.u) return `<span class="rep-prev">${one}<span class="more">…🏠</span></span>`;
   return '<span class="rep-prev">' + Array.from({ length: it.n }, () => one).join('<span class="sep"></span>') + '</span>';
 }
-// Tocar una flecha del programa la gira (sirve para arreglar "bichitos")
-function rotateAt(p, i, j) {
-  const it = S.prog[p][i]; if (!it) return;
-  const dirs = TURN.filter(d => S.L.tools.includes(d)); if (dirs.length < 2) return;
-  const next = d => !TURN.includes(d) ? d : dirs[(dirs.indexOf(d) + 1) % dirs.length];
-  if (j !== undefined) it.body[j] = next(it.body[j]); else if (it.t === 'm') it.d = next(it.d); else return;
-  unready(p); Snd.play('add', j !== undefined ? it.body[j] : it.d); tutoDone(p, 'blk'); renderProg(p);
-}
 function pick(p, i) {
   if (!isPredict()) return;
   S.pick[p] = i; unready(p); Snd.play('add', 'r');
@@ -401,25 +396,31 @@ function pick(p, i) {
   S.fruits.filter(f => f.p === p).forEach(f => { f.el.classList.toggle('pick', f.i === i); f.el.classList.toggle('dim', f.i !== i); });
   tutoDone(p, 'pick'); renderProg(p);
 }
+// Una pila: bloques sueltos y repetir con boca (s = número de pila; -1 = lo que se lleva en la mano)
+function stackHTML(items, s, ro) {
+  ro = ro || '';
+  return items.map((it, i) => {
+    if (it.t === 'm') return `<button class="blk d-${it.d}${ro}" data-s="${s}" data-i="${i}">${blkInner(it.d)}</button>`;
+    return `<div class="rep${it.open ? ' open' : ''}${it.u ? ' until' : ''}" data-s="${s}" data-ri="${i}"><div class="rep-head"><span class="rep-ico">🔁</span>` +
+      (it.u ? '<span class="rep-home">🏠</span>' : `<button class="rep-m" data-s="${s}" data-rm="${i}" title="Z ,">−</button><button class="rep-n" data-s="${s}" data-n="${i}">${it.n}</button><button class="rep-p" data-s="${s}" data-rp="${i}" title="X .">+</button>`) +
+      '</div><div class="rep-body">' + it.body.map((d, j) => `<button class="blk d-${d}${ro}" data-s="${s}" data-i="${i}" data-j="${j}">${blkInner(d)}</button>`).join('') +
+      '</div><div class="rep-foot">' + (it.open && it.body.length ? `<button class="rep-close" data-s="${s}" data-rclose="${i}">✔</button>` : repPreview(it)) + '</div></div>';
+  }).join('');
+}
 function renderProg(p) {
   const prog = S.prog[p], max = S.L.max, n = countOf(p), ro = isPredict() ? ' ro' : '';
-  // Estilo code.org: bloque de inicio arriba y bloques encastrados en columna
   const dots = isPredict() ? '' : `<span class="dots">${'●'.repeat(Math.min(n, 14))}<i>${'●'.repeat(Math.max(0, Math.min(max, 14) - n))}</i></span>`;
   const gem = !isPredict() && S.L.par ? `<span class="gem" title="Con ${S.L.par[p]} bloques o menos, ¡hay 💎!">💎 ${S.L.par[p]}</span>` : '';
-  let h = `<div class="hat"><span class="hat-go">▶</span>${dots}${gem}</div>`;
-  prog.forEach((it, i) => {
-    if (it.t === 'm') h += `<button class="blk d-${it.d}${ro}" data-i="${i}">${blkInner(it.d)}</button>`;
-    else h += `<div class="rep${it.open ? ' open' : ''}${it.u ? ' until' : ''}" data-ri="${i}"><div class="rep-head"><span class="rep-ico">🔁</span>` +
-      (it.u ? '<span class="rep-home">🏠</span>' : `<button class="rep-m" data-rm="${i}" title="Z ,">−</button><button class="rep-n" data-n="${i}">${it.n}</button><button class="rep-p" data-rp="${i}" title="X .">+</button>`) + '</div><div class="rep-body">' +
-      it.body.map((d, j) => `<button class="blk d-${d}${ro}" data-i="${i}" data-j="${j}">${blkInner(d)}</button>`).join('') +
-      (!it.body.length ? '<span class="slot sm">+</span>' : '') + '</div><div class="rep-foot">' + (it.open && it.body.length ? `<button class="rep-close" data-rclose="${i}">✔</button>` : repPreview(it)) + '</div></div>';
-  });
   const last0 = prog[prog.length - 1];
-  if (!isPredict() && n < max && !(last0 && last0.t === 'rep' && last0.open)) h += '<span class="slot"></span>';
-  $('#prog-' + p).innerHTML = h;
+  // Pila del ▶ (la única que corre) y, al lado, las sueltas: se ven apagadas y no cuentan
+  let h = `<div class="ws-canvas"><div class="stack hat-stack" data-s="0" style="left:${Workspace.HAT.x}px;top:${Workspace.HAT.y}px"><div class="hat"><span class="hat-go">▶</span>${dots}${gem}</div>` + stackHTML(prog, 0, ro) +
+    (!isPredict() && n < max && !(last0 && last0.t === 'rep' && last0.open) ? '<span class="slot"></span>' : '') + '</div>';
+  S.loose[p].forEach((st, k) => { h += `<div class="stack loose" data-s="${k + 1}" style="left:${st.x}px;top:${st.y}px">${stackHTML(st.items, k + 1, ro)}</div>`; });
+  WS.paint(p, h + '</div>');
   if (S.flash && S.flash.p === p) {
     const f = S.flash; S.flash = null;
-    const el = $(`#prog-${p} ` + (f.j !== undefined ? `.blk[data-i="${f.i}"][data-j="${f.j}"]` : `.blk[data-i="${f.i}"]:not([data-j]), #prog-${p} .rep[data-ri="${f.i}"]`));
+    const q = `#prog-${p} [data-s="${f.s}"]`;
+    const el = $(f.j !== undefined ? `${q}.blk[data-i="${f.i}"][data-j="${f.j}"]` : `${q}.blk[data-i="${f.i}"]:not([data-j]), #prog-${p} .rep[data-s="${f.s}"][data-ri="${f.i}"]`);
     if (el) el.classList.add('dropped');
   }
   const last = prog[prog.length - 1], open = last && last.t === 'rep' && last.open;
@@ -431,146 +432,42 @@ function renderProg(p) {
   $(`#panel-${p} .ready`).disabled = isPredict() ? S.pick[p] === null : n === 0;
   placeTuto(p);
 }
+// Herramientas del nivel en una columna al costado del área; si no entran a lo alto, pasan a dos columnas
+const PAL_ACTS = ['u', 'd', 'l', 'r', 'j', 'rep', 'h', 'c', 'g'];
+function fitTools(p) {
+  const main = $(`#panel-${p} .p-main`), tb = $(`#panel-${p} .palette`); if (!main || !S.L || !main.clientHeight) return;
+  const n = S.L.tools.filter(t => PAL_ACTS.includes(t)).length || 1, cs = getComputedStyle(tb);
+  const pb = parseFloat(cs.getPropertyValue('--pb')) || 44, gap = parseFloat(cs.getPropertyValue('--pg')) || 4;
+  tb.style.setProperty('--trows', Math.max(1, Math.min(n, Math.floor((main.clientHeight + gap) / (pb + gap)))));
+}
 function setTools() {
   for (const p of ['A', 'B']) {
-    ['u', 'd', 'l', 'r', 'j', 'c', 'g'].forEach(d => $(`#panel-${p} [data-act="${d}"]`).classList.toggle('hide', !S.L.tools.includes(d)));
-    $(`#panel-${p} .pal.rp`).style.display = S.L.tools.includes('rep') ? '' : 'none';
-    $(`#panel-${p} .pal.hp`).style.display = S.L.tools.includes('h') ? '' : 'none';
+    PAL_ACTS.forEach(d => $(`#panel-${p} [data-act="${d}"]`).classList.toggle('hide', !S.L.tools.includes(d)));
     $('#panel-' + p).classList.toggle('mode-predict', isPredict());
     $$(`#panel-${p} .pick-btn`).forEach(b => b.classList.remove('on'));
     const first = (S.L.first || 'A') === p, coop = S.L.map.some(r => r.includes('o'));
     $('#order-' + p).textContent = coop ? (first ? '1️⃣' : '2️⃣') : '';
   }
+  ['A', 'B'].forEach(fitTools);
 }
 
-/* ---------- Arrastrar y soltar (mouse o dedo, un puntero por chico) ---------- */
-const DRAG = new Map();            // pointerId -> estado del arrastre
-let suppressClick = false;
-function dragSource(t, p) {
-  const pal = t.closest('.pal');
-  if (pal && ['u', 'd', 'l', 'r', 'j', 'c', 'g', 'rep', 'h'].includes(pal.dataset.act)) return { kind: 'pal', act: pal.dataset.act, el: pal };
-  const blk = t.closest(`#prog-${p} .blk`);
-  if (blk && !blk.classList.contains('ro')) return { kind: 'blk', i: +blk.dataset.i, j: blk.dataset.j !== undefined ? +blk.dataset.j : undefined, el: blk };
-  const head = t.closest(`#prog-${p} .rep-head`);
-  if (head && !t.closest('.rep-n, .rep-m, .rep-p')) return { kind: 'blk', i: +head.parentNode.dataset.ri, rep: true, el: head };
-  return null;
-}
-function dragWhat(d) {
-  if (d.src.kind === 'pal') return d.src.act;
-  const it = S.prog[d.p][d.src.i]; if (!it) return null;
-  if (d.src.j !== undefined) return it.body[d.src.j];
-  return it.t === 'rep' ? (it.u ? 'h' : 'rep') : it.d;
-}
-document.addEventListener('pointerdown', e => {
-  if (e.pointerType === 'mouse' && e.button !== 0) return;
-  if (S.running || S.overlay || !S.L || !$('#scr-game').classList.contains('active') || isPredict()) return;
-  const panel = e.target.closest && e.target.closest('.panel'); if (!panel) return;
-  const p = panel.dataset.p, src = dragSource(e.target, p); if (!src) return;
-  if (src.kind === 'pal' && !S.L.tools.includes(src.act)) return;
-  DRAG.set(e.pointerId, { p, src, sx: e.clientX, sy: e.clientY, on: false });
-  try { src.el.setPointerCapture(e.pointerId); } catch (err) {}
-});
-document.addEventListener('pointermove', e => {
-  const d = DRAG.get(e.pointerId); if (!d) return;
-  if (!d.on) { if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 8) return; startDrag(d); }
-  if (!d.on) return;
-  d.ghost.style.transform = `translate(${e.clientX - 34}px,${e.clientY - 28}px) scale(1.1)`;
-  updateTarget(d, e);
-  // Autoscroll: si el dedo/mouse llega al borde del programa, se desplaza solo
-  const pr = $('#prog-' + d.p);
-  if (pr) { const r = pr.getBoundingClientRect(); if (e.clientX > r.left && e.clientX < r.right) { if (e.clientY < r.top + 40) pr.scrollTop -= 14; else if (e.clientY > r.bottom - 40) pr.scrollTop += 14; } }
-});
-document.addEventListener('pointerup', e => endDrag(e, false));
-document.addEventListener('pointercancel', e => endDrag(e, true));
-document.addEventListener('click', e => { if (suppressClick) { suppressClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
-
-function startDrag(d) {
-  const what = dragWhat(d); if (!what) { DRAG.forEach((v, k) => v === d && DRAG.delete(k)); return; }
-  d.on = true; d.what = what; suppressClick = true; unreadyOnDrag(d.p);
-  const g = document.createElement('div');
-  g.className = 'ghost ' + (what === 'rep' || what === 'h' ? 'g-rep' : 'd-' + what);
-  g.innerHTML = what === 'rep' ? '<span>🔁</span>' : what === 'h' ? '<span>🔁🏠</span>' : blkInner(what);
-  document.body.appendChild(g); d.ghost = g;
-  const m = document.createElement('div'); m.className = 'ins-marker ' + d.p; m.style.display = 'none';
-  document.body.appendChild(m); d.marker = m;
-  if (d.src.kind === 'blk') d.src.el.classList.add('dragging');
-  $('#prog-' + d.p).classList.add('drag-on');
-  Snd.play('lift');
-}
-function unreadyOnDrag(p) { unready(p); }
-function calcTarget(d, e, pr) {
-  const prog = S.prog[d.p], y = e.clientY;
-  const kids = [...pr.children].filter(c => c.dataset.i !== undefined || c.dataset.ri !== undefined);
-  const idx = c => +(c.dataset.i !== undefined ? c.dataset.i : c.dataset.ri);
-  for (const c of kids) {
-    const r = c.getBoundingClientRect();
-    if (c.classList.contains('rep') && d.what !== 'rep' && d.what !== 'h' && y >= r.top + 20 && y <= r.bottom) {
-      const ri = idx(c), body = c.querySelector('.rep-body'), bk = [...body.querySelectorAll('.blk')], br = body.getBoundingClientRect();
-      let bi = bk.length;
-      for (let k = 0; k < bk.length; k++) { const q = bk[k].getBoundingClientRect(); if (y < q.top + q.height / 2) { bi = k; break; } }
-      const my = bi < bk.length ? bk[bi].getBoundingClientRect().top : (bk.length ? bk[bk.length - 1].getBoundingClientRect().bottom : br.top + 2);
-      const sameRep = d.src.kind === 'blk' && d.src.j !== undefined && d.src.i === ri;
-      const full = prog[ri].body.length - (sameRep ? 1 : 0) >= REP_BODY_MAX;
-      return { ri, bi, full, mark: { x: br.left, w: br.width, y: my } };
-    }
-    if (y < r.top + r.height / 2) return { ri: idx(c), mark: { x: r.left, w: r.width, y: r.top } };
-  }
-  const last = kids[kids.length - 1];
-  if (last) { const r = last.getBoundingClientRect(); return { ri: prog.length, mark: { x: r.left, w: r.width, y: r.bottom } }; }
-  const h = pr.querySelector('.hat').getBoundingClientRect();
-  return { ri: prog.length, mark: { x: h.left, w: h.width, y: h.bottom } };
-}
-function updateTarget(d, e) {
-  const pr = $('#prog-' + d.p), r = pr.getBoundingClientRect();
-  const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-  d.tgt = inside ? calcTarget(d, e, pr) : null;
-  const m = d.marker;
-  if (d.tgt) { m.style.display = 'block'; m.style.left = d.tgt.mark.x + 'px'; m.style.top = (d.tgt.mark.y - 5) + 'px'; m.style.width = d.tgt.mark.w + 'px'; m.classList.toggle('bad', !!d.tgt.full); }
-  else m.style.display = 'none';
-  pr.classList.toggle('drop-on', !!d.tgt);
-  d.ghost.classList.toggle('del', d.src.kind === 'blk' && !d.tgt);
-}
-function endDrag(e, cancel) {
-  const d = DRAG.get(e.pointerId); if (!d) return;
-  DRAG.delete(e.pointerId);
-  if (!d.on) return;
-  d.ghost.remove(); d.marker.remove();
-  $('#prog-' + d.p).classList.remove('drop-on', 'drag-on');
-  d.src.el.classList.remove('dragging');
-  setTimeout(() => { suppressClick = false; }, 60);
-  if (cancel || S.running || S.overlay) return;
-  applyDrop(d);
-}
-function applyDrop(d) {
-  const p = d.p, prog = S.prog[p], t = d.tgt, src = d.src;
-  if (!t) {                                    // soltó afuera: si venía del programa, se borra
-    if (src.kind !== 'blk') return;
-    takeItem(p, src); Snd.play('del'); return renderProg(p);
-  }
-  if (t.full) return full(p);
-  if (src.kind === 'pal' && countOf(p) >= S.L.max) return full(p);
-  let ri = t.ri, bi = t.bi, item;
-  if (src.kind === 'pal') item = src.act === 'rep' ? { rep: { t: 'rep', n: 2, body: [], open: false } } : src.act === 'h' ? { rep: { t: 'rep', u: true, n: 2, body: [], open: false } } : { d: src.act };
-  else {
-    const sameRepBody = src.j !== undefined && bi !== undefined && src.i === ri;
-    item = takeItem(p, src);
-    if (src.j === undefined && src.i < ri) ri--;              // el de arriba salió: todo sube un lugar
-    if (sameRepBody && src.j < bi) bi--;
-  }
-  if (bi !== undefined) {
-    if (item.rep) { prog.splice(ri, 0, item.rep); S.flash = { p, i: ri }; if (!item.rep.body.length) Voice.say('Poné adentro lo que se repite.'); }
-    else { prog[ri].body.splice(bi, 0, item.d); S.flash = { p, i: ri, j: bi }; }
-  } else {
-    prog.splice(ri, 0, item.rep || { t: 'm', d: item.d }); S.flash = { p, i: ri };
-  }
-  Snd.play('drop'); if (item.d) tutoDone(p, item.d); else tutoDone(p, item.rep.u ? 'h' : 'rep');
-  renderProg(p);
-}
-function takeItem(p, src) {
-  const prog = S.prog[p];
-  if (src.j !== undefined) return { d: prog[src.i].body.splice(src.j, 1)[0] };
-  const it = prog.splice(src.i, 1)[0];
-  return it.t === 'rep' ? { rep: it } : { d: it.d };
+/* ---------- Arrastrar y soltar: el área de trabajo vive en workspace.js ---------- */
+let WS = null;                                         // se arma en init(), cuando ya existen los paneles
+function attachWorkspace() {
+  WS = Workspace.attach({
+    S,
+    busy: p => S.running,                              // la carrera (cada chico por su cuenta) lo cambia por chico
+    active: () => !S.overlay && !!S.L && $('#scr-game').classList.contains('active'),
+    predict: isPredict,
+    hasTool: a => S.L.tools.includes(a),
+    max: () => S.L.max,
+    html: stackHTML,
+    render: renderProg,
+    touched: unready,
+    sound: n => Snd.play(n),
+    full, done: tutoDone, say: Voice.say.bind(Voice),
+    flash: f => { S.flash = f; }
+  });
 }
 
 /* ---------- Manito guía ---------- */
@@ -619,7 +516,7 @@ function unready(p) {
 function startLevel(i, customL) {
   if (!customL) S.duo = null;
   S.custom = !!customL; S.idx = i; S.L = customL || LEVELS[i]; S.fails = 0;
-  S.prog = { A: parseProg(S.L.pre?.A), B: parseProg(S.L.pre?.B) };
+  S.prog = { A: parseProg(S.L.pre?.A), B: parseProg(S.L.pre?.B) }; S.loose = { A: [], B: [] };
   S.ready = { A: false, B: false }; S.pick = { A: null, B: null };
   S.tuto = !S.custom && TUTO[i] ? { A: [...TUTO[i]], B: [...TUTO[i]] } : null;
   overlay(null); show('scr-game'); setWorld(S.custom ? 0 : worldOf(i));
@@ -728,10 +625,10 @@ function markRun(p, st) {
   $$(`#prog-${p} .run`).forEach(e => e.classList.remove('run'));
   $$(`#prog-${p} .rep`).forEach(e => e.removeAttribute('data-iter'));
   if (!st) return;
-  const sel = st.j === undefined ? `#prog-${p} [data-i="${st.i}"]` : `#prog-${p} [data-i="${st.i}"][data-j="${st.j}"]`;
+  const sel = st.j === undefined ? `#prog-${p} [data-s="0"][data-i="${st.i}"]` : `#prog-${p} [data-s="0"][data-i="${st.i}"][data-j="${st.j}"]`;
   const el = $(sel); if (el) el.classList.add('run');
   if (st.j !== undefined) {
-    const rep = $(`#prog-${p} [data-ri="${st.i}"]`);
+    const rep = $(`#prog-${p} [data-s="0"][data-ri="${st.i}"]`);
     if (rep) { rep.classList.add('run'); rep.dataset.iter = st.u ? `${st.k + 1}` : `${st.k + 1}/${st.n}`; }
   }
 }
@@ -742,7 +639,7 @@ function fx(p, emoji) {
 
 async function run() {
   if (S.running) return;
-  S.running = true; Voice.stop();
+  S.running = true; Voice.stop(); WS.cancelAll();
   $$('.tuto-hand').forEach(h => h.remove());
   resetRun();
   $$('.panel').forEach(p => p.classList.add('locked'));
@@ -804,7 +701,7 @@ async function runRobot(p) {
     switch (ev.e) {
       case 'op': markRun(p, ev); if (ev.d === 'j') hop('hop'); break;
       case 'cond':                                  // 👀 el robot "mira" y dice si sí (✔) o no (✖)
-        if (ev.c === 'h') { $$(`#prog-${p} .run`).forEach(e => e.classList.remove('run')); const rp = $(`#prog-${p} [data-ri="${ev.i}"]`); if (rp) { rp.classList.add('run'); rp.dataset.iter = `${ev.k + 1}`; } }
+        if (ev.c === 'h') { $$(`#prog-${p} .run`).forEach(e => e.classList.remove('run')); const rp = $(`#prog-${p} [data-s="0"][data-ri="${ev.i}"]`); if (rp) { rp.classList.add('run'); rp.dataset.iter = `${ev.k + 1}`; } }
         fx(p, ev.yes ? '👀✔' : '👀✖'); Snd.play('tick'); await sleep(ev.c === 'h' ? 260 : (S.fast ? 260 : 380)); break;
       case 'star':
         S.starEl[key(ev.x, ev.y)]?.classList.add('got'); Snd.play('star');
@@ -1202,7 +1099,7 @@ function syncToggles() {
   $('#t-voice').textContent = '🗣️ Voz: ' + (S.save.voice ? 'sí' : 'no');
 }
 function init() {
-  initStart(); buildPanel('A'); buildPanel('B'); syncToggles();
+  initStart(); buildPanel('A'); buildPanel('B'); attachWorkspace(); syncToggles();
   document.addEventListener('pointerdown', () => Snd.init(), { once: true });
   $('#map-back').onclick = () => show('scr-start');
   $('#btn-map').onclick = () => { if (S.running) return; S.custom && !S.duo ? openEditor() : openMap(); };
@@ -1235,7 +1132,7 @@ function init() {
   eb.addEventListener('pointermove', e => { if (!ED.painting) return; const t = document.elementFromPoint(e.clientX, e.clientY)?.closest('#ed-board .tile'); if (t) edPaint(t); });
   window.addEventListener('pointerup', () => ED.painting = false);
   const onResize = () => {
-    sizeBoard();
+    sizeBoard(); ['A', 'B'].forEach(fitTools);
     if ($('#scr-duo').classList.contains('active')) duoFit();
     if ($('#scr-editor').classList.contains('active')) fitBoard($('#ed-board'), $('#ed-wrap'), ED_COLS, ED_ROWS);
     if (S.tuto) ['A', 'B'].forEach(placeTuto);
