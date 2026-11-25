@@ -21,7 +21,7 @@ what 1st grade already knows (48 levels, blocks, saved progress).
 - Nobody loses: no eliminations, no ranking between pairs.
 - Push and deploy are NOT authorized yet (classes use the live site).
 - RDD is off (global, user decision). TDD: not configured; ordinary functional checks.
-- Delivery: `exception-ok` (repo has no PR flow), work-unit commits on `feat/segundo-grado`. Forecast ~1500 lines.
+- Delivery: `exception-ok` (repo has no PR flow), work-unit commits on `feat/segundo-grado`. Forecast ~1900 lines (T3b added).
 
 ## Design
 
@@ -57,6 +57,20 @@ both conditions. 6 🌋 El volcán — everything together, coop doors.
 Gem 💎: every level has `par:{A,B}` (blocks of the stored solution). Winning with both programs ≤ par shows 💎 next to
 the stars (extra prize, never a penalty; the 3 stars do not depend on it).
 
+### Scratch-like workspace, both grades (T3b, user request 2026-11-25)
+Today a drag moves one block of a full-width list and a line marks the target. Make it behave like Scratch:
+- The program area is a free workspace: blocks are as wide as their content, the ▶ hat is fixed at the top left.
+- Dragging a block takes it AND every block attached below it (inside a C: the rest of that body). Dragging a C block
+  takes its body too. The stack follows the pointer with its real look.
+- Near a connection, the blocks make room and a grey shadow of the dragged stack shows where it snaps. Connections:
+  under any block, top/inside of a C mouth, and above a loose stack.
+- Dropping an empty C block above attached blocks wraps the blocks below that fit in its body.
+- Dropping away from any connection leaves a loose stack where it fell: dimmed, not run, does not count for max or 💎.
+- Dropping on the palette or outside the panel deletes; the palette shows 🗑️ while dragging a placed block.
+- Tapping a palette block still appends to the hat stack (keyboard too). Two pointers can drag at the same time.
+- Limits stay: level max and 3 blocks per C body; what does not fit bounces back or stays loose, never disappears.
+- Predict levels stay read-only. Retry keeps the program, loose stacks included.
+
 ### Fun for everyone (T4, T5)
 - 🏁 Carrera (both grades, button on map): game screen with a 9x5 board, two mirrored lanes split by water, generated
   randomly with growing difficulty, 5 rounds. Each kid runs their own program with their own ▶, no countdown, no waiting.
@@ -76,6 +90,7 @@ the stars (extra prize, never a penalty; the 3 stars do not depend on it).
 - [ ] T1 Pure engine + level checker + grade selection (delegated)
 - [ ] T2 New blocks, boxes, moving house (delegated)
 - [ ] T3 36 second-grade levels, gem (delegated)
+- [ ] T3b Scratch-like drag workspace, added on user request (delegated, after T3)
 - [ ] T4 Race mode (delegated)
 - [ ] T5 Coins and wardrobe (delegated)
 - [ ] T6 Friction fixes, teacher panel, README, cache bump (delegated)
